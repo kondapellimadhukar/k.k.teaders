@@ -16,3 +16,10 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 
 console.log("Firebase Auth, Firestore, and Storage initialized successfully.");
+
+// Helper translation functions to bridge Compat and Modular API
+const doc = (dbInstance, collectionPath, docId) => dbInstance.collection(collectionPath).doc(docId);
+const getDoc = (docRef) => docRef.get();
+const setDoc = (docRef, data) => docRef.set(data);
+const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
+
