@@ -796,9 +796,14 @@ async function handleFarmerSubmit(e) {
 
   try {
     showToast("Uploading Images", "Uploading crop photos to Firebase Storage...", "info");
+    
+    console.log("Image upload started");
     const imageUrls = await uploadImagesToStorage(currentUser.uid, uploadedImages);
+    console.log("Image upload completed");
 
+    console.log("AI diagnosis started");
     const diagnosis = calculateAIDiagnosis(cropType, symptoms);
+    console.log("AI diagnosis completed");
 
     const newRequest = {
       userId: currentUser.uid,
@@ -821,6 +826,7 @@ async function handleFarmerSubmit(e) {
 
     const docRef = await db.collection('farmerRequests').add(newRequest);
     newRequest.id = docRef.id;
+    console.log("Firestore request saved");
 
     // Add notification
     await addNotification(currentUser.uid, translations[currentLanguage].notification_submitted, 'info');
@@ -832,6 +838,8 @@ async function handleFarmerSubmit(e) {
     renderImagePreviews();
 
     showToast("Case Diagnosed", "AI diagnosis report generated.", "success");
+    
+    console.log("Redirecting to result page");
     showPage('view-farmer-result');
   } catch (err) {
     console.error("Farmer submit error:", err);
@@ -843,7 +851,7 @@ async function handleFarmerSubmit(e) {
   }
 }
 
-// Storage upload helper with individual error handling
+// Storage upload helper with individual error handling and timeout
 async function uploadImagesToStorage(userId, base64Images) {
   const downloadUrls = [];
   for (let i = 0; i < base64Images.length; i++) {
@@ -851,16 +859,18 @@ async function uploadImagesToStorage(userId, base64Images) {
       const base64Str = base64Images[i];
       const imageId = Date.now() + '_' + i;
       const ref = storage.ref().child(`crop_photos/${userId}/${imageId}.jpg`);
-      const snapshot = await ref.putString(base64Str, 'data_url');
-      const url = await snapshot.ref.getDownloadURL();
+      
+      console.log(`Uploading image ${i + 1}/${base64Images.length}...`);
+      // Wrap the putString in a 10s timeout, and getDownloadURL in a 5s timeout
+      const snapshot = await promiseTimeout(ref.putString(base64Str, 'data_url'), 10000);
+      const url = await promiseTimeout(snapshot.ref.getDownloadURL(), 5000);
+      
       downloadUrls.push(url);
     } catch (err) {
       console.error(`Image ${i + 1} upload failed:`, err);
-      showToast("Upload Error", `Image ${i + 1} failed to upload: ${err.message}. Skipping.`, "warning");
+      showToast("Upload Error", `Image ${i + 1} failed to upload: ${err.message}`, "warning");
+      throw err; // Propagate the error so loading stops and submission fails as required
     }
-  }
-  if (downloadUrls.length === 0 && base64Images.length > 0) {
-    throw new Error("All images failed to upload. Please try again.");
   }
   return downloadUrls;
 }
