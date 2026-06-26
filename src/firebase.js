@@ -23,15 +23,3 @@ const getDoc = (docRef) => docRef.get();
 const setDoc = (docRef, data) => docRef.set(data);
 const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
 
-// Promise timeout helper
-const promiseTimeout = (promise, ms) => {
-  let timeout = new Promise((resolve, reject) => {
-    let id = setTimeout(() => {
-      clearTimeout(id);
-      reject(new Error("Timeout after " + (ms / 1000) + " seconds."));
-    }, ms);
-  });
-  return Promise.race([promise, timeout]);
-};
-
-

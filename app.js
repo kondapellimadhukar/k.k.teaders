@@ -795,15 +795,39 @@ async function handleFarmerSubmit(e) {
   btn.innerHTML = `<span class="spinner"></span> Uploading & Diagnosing...`;
 
   try {
-    showToast("Uploading Images", "Uploading crop photos to Firebase Storage...", "info");
-    
     console.log("Image upload started");
+    showToast("Uploading Images", "Uploading crop photos to Firebase Storage...", "info");
     const imageUrls = await uploadImagesToStorage(currentUser.uid, uploadedImages);
     console.log("Image upload completed");
 
+    let diagnosis = null;
     console.log("AI diagnosis started");
-    const diagnosis = calculateAIDiagnosis(cropType, symptoms);
-    console.log("AI diagnosis completed");
+    try {
+      // Call secure Vercel Serverless Function
+      const diagResponse = await fetch('/api/diagnose', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          cropType: cropType,
+          symptoms: symptoms,
+          description: description,
+          images: uploadedImages // Send base64 images
+        })
+      });
+
+      if (!diagResponse.ok) {
+        throw new Error(`Server returned error status ${diagResponse.status}`);
+      }
+
+      diagnosis = await diagResponse.json();
+      console.log("AI diagnosis completed");
+    } catch (apiErr) {
+      console.warn("Secure Gemini API call failed. Using local rule-based fallback:", apiErr);
+      diagnosis = calculateAIDiagnosis(cropType, symptoms);
+      console.log("AI diagnosis completed (Local Fallback)");
+    }
 
     const newRequest = {
       userId: currentUser.uid,
@@ -838,7 +862,6 @@ async function handleFarmerSubmit(e) {
     renderImagePreviews();
 
     showToast("Case Diagnosed", "AI diagnosis report generated.", "success");
-    
     console.log("Redirecting to result page");
     showPage('view-farmer-result');
   } catch (err) {
@@ -851,7 +874,7 @@ async function handleFarmerSubmit(e) {
   }
 }
 
-// Storage upload helper with individual error handling and timeout
+// Storage upload helper with individual error handling
 async function uploadImagesToStorage(userId, base64Images) {
   const downloadUrls = [];
   for (let i = 0; i < base64Images.length; i++) {
@@ -859,18 +882,16 @@ async function uploadImagesToStorage(userId, base64Images) {
       const base64Str = base64Images[i];
       const imageId = Date.now() + '_' + i;
       const ref = storage.ref().child(`crop_photos/${userId}/${imageId}.jpg`);
-      
-      console.log(`Uploading image ${i + 1}/${base64Images.length}...`);
-      // Wrap the putString in a 10s timeout, and getDownloadURL in a 5s timeout
-      const snapshot = await promiseTimeout(ref.putString(base64Str, 'data_url'), 10000);
-      const url = await promiseTimeout(snapshot.ref.getDownloadURL(), 5000);
-      
+      const snapshot = await ref.putString(base64Str, 'data_url');
+      const url = await snapshot.ref.getDownloadURL();
       downloadUrls.push(url);
     } catch (err) {
       console.error(`Image ${i + 1} upload failed:`, err);
-      showToast("Upload Error", `Image ${i + 1} failed to upload: ${err.message}`, "warning");
-      throw err; // Propagate the error so loading stops and submission fails as required
+      showToast("Upload Error", `Image ${i + 1} failed to upload: ${err.message}. Skipping.`, "warning");
     }
+  }
+  if (downloadUrls.length === 0 && base64Images.length > 0) {
+    throw new Error("All images failed to upload. Please try again.");
   }
   return downloadUrls;
 }
