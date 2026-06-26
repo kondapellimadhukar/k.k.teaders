@@ -1,0 +1,26 @@
+{
+  "short_name": "AgroAssist",
+  "name": "AgroAssist - crop leaf problems solver",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "logo-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#1b4332",
+  "theme_color": "#2d6a4f",
+  "display": "standalone",
+  "orientation": "portrait"
+}

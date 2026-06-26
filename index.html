@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="AgroAssist - Crop diagnosis and fertilizer guidance powered by K.K TRADERS">
+  <title>AgroAssist - Crop Diagnosis & Fertilizer Guidance</title>
+  
+  <!-- Manifest & Favicon -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="apple-touch-icon" href="logo-192.png">
+  
+  <!-- CSS Link -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Splash Screen -->
+  <div id="splash-screen">
+    <img src="logo.svg" alt="AgroAssist Logo" class="splash-logo">
+    <h1 class="splash-title">AgroAssist</h1>
+    <p class="splash-subtitle" data-i18n="powered_by">Powered by K.K TRADERS</p>
+    <div class="splash-loader"></div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-content">
+      <div class="logo-container" id="header-logo-click">
+        <img src="logo.svg" alt="AgroAssist Logo" class="header-logo">
+        <div class="brand-info">
+          <span class="brand-name">AgroAssist</span>
+          <span class="brand-owner" id="header-business-name">K.K TRADERS</span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Language Selector -->
+        <select id="lang-select" class="lang-selector">
+          <option value="en">English</option>
+          <option value="te">తెలుగు</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+
+        <!-- Notifications -->
+        <button id="notification-btn" class="icon-btn" title="Notifications" style="display: none;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="unread-count" class="badge-number" style="display: none;">0</span>
+        </button>
+
+        <!-- Sign Out Button -->
+        <button id="signout-btn" class="icon-btn" title="Sign Out" style="display: none;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Tray Modal (Simple Dropdown Panel) -->
+  <div id="notification-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 12px;">
+      <h4 style="margin: 0; color: var(--primary-dark);" data-i18n="notifications">Notifications</h4>
+      <button id="clear-notifications" class="btn-text" style="padding: 0; font-size: 0.8rem;" data-i18n="clear_all">Clear All</button>
+    </div>
+    <div id="notification-list" style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- Notifications insert dynamically -->
+      <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 16px 0;" data-i18n="no_notifications">No notifications yet</p>
+    </div>
+  </div>
+
+  <!-- Main View Container -->
+  <main class="container">
+    
+
+    <!-- 2. LOGIN PAGE -->
+    <section id="view-login" class="page-section fade-in">
+      <div class="auth-container">
+        <div class="auth-header">
+          <img src="logo.svg" alt="AgroAssist Logo" class="auth-logo">
+          <h2>AgroAssist</h2>
+          <p data-i18n="powered_by">Powered by K.K TRADERS</p>
+        </div>
+        <form id="login-form" class="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="login-email" data-i18n="login_user_field">Email Address</label>
+            <input type="email" id="login-email" class="form-control" placeholder="example@mail.com" value="ramesh@gmail.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="login-password" data-i18n="password">Password</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" value="009876" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit">
+            <span data-i18n="login">Login</span>
+          </button>
+        </form>
+        <div class="auth-footer">
+          <span data-i18n="no_account">Don't have a farmer account?</span>
+          <a href="#" id="link-to-signup" data-i18n="signup_now">Sign Up as Farmer</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. FARMER SIGNUP PAGE -->
+    <section id="view-signup" class="page-section fade-in">
+      <div class="auth-container">
+        <div class="auth-header">
+          <img src="logo.svg" alt="AgroAssist Logo" class="auth-logo">
+          <h2 data-i18n="farmer_signup_title">Farmer Registration</h2>
+          <p data-i18n="farmer_signup_subtitle">Create a free account to diagnose crop issues</p>
+        </div>
+        <form id="signup-form" class="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="signup-name" data-i18n="farmer_name">Full Name *</label>
+            <input type="text" id="signup-name" class="form-control" placeholder="Ramesh Kumar" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Email Address *</label>
+            <input type="email" id="signup-email" class="form-control" placeholder="farmer@mail.com" value="ramesh@gmail.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-password" data-i18n="password">Password *</label>
+            <input type="password" id="signup-password" class="form-control" placeholder="Min 6 characters" minlength="6" value="009876" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-mobile" data-i18n="mobile_number">Mobile Number</label>
+            <input type="tel" id="signup-mobile" class="form-control" placeholder="9876543210">
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="signup-village" data-i18n="village">Village *</label>
+              <input type="text" id="signup-village" class="form-control" placeholder="Kodur" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signup-district" data-i18n="district">District *</label>
+              <input type="text" id="signup-district" class="form-control" placeholder="Kadapa" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-lang" data-i18n="preferred_language">Preferred Language *</label>
+            <select id="signup-lang" class="form-control" required>
+              <option value="en">English</option>
+              <option value="te">తెలుగు</option>
+              <option value="hi">हिन्दी</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="btn-signup-submit">
+            <span data-i18n="register_btn">Register & Sign Up</span>
+          </button>
+        </form>
+        <div class="auth-footer">
+          <span data-i18n="already_have_account">Already have an account?</span>
+          <a href="#" id="link-to-login" data-i18n="login">Login</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. FARMER PORTAL/DASHBOARD -->
+    <section id="view-farmer-dashboard" class="page-section fade-in">
+      <div class="farmer-banner">
+        <h2 data-i18n="farmer_dashboard_title">AgroAssist – AI-Assisted Crop Diagnosis and Fertilizer Guidance</h2>
+        <p data-i18n="problem_statement">Farmers often face crop leaf problems such as yellow leaves, leaf spots, pest attacks, and nutrient deficiencies. Many farmers are unsure about which fertilizer or treatment is suitable. AgroAssist helps farmers upload crop images, select symptoms, and receive AI-assisted preliminary diagnosis, precautions, and fertilizer suggestions, which can be verified by K.K TRADERS.</p>
+      </div>
+
+      <!-- Real Weather Widget -->
+      <div class="weather-card">
+        <div class="weather-header">
+          <div class="weather-title-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              <circle cx="12" cy="12" r="4"></circle>
+            </svg>
+            <h3 data-i18n="weather_widget_title">Live Weather & Crop Advisory</h3>
+          </div>
+          <span class="weather-status-text" id="weather-location-name">--</span>
+        </div>
+        
+        <div id="weather-data-content" class="weather-body">
+          <div class="weather-item">
+            <div class="weather-item-label" data-i18n="temperature">Temperature</div>
+            <div class="weather-item-val" id="weather-temp">--°C</div>
+          </div>
+          <div class="weather-item">
+            <div class="weather-item-label" data-i18n="humidity">Humidity</div>
+            <div class="weather-item-val" id="weather-humidity">--%</div>
+          </div>
+          <div class="weather-item">
+            <div class="weather-item-label" data-i18n="rain_chance">Rain Chance</div>
+            <div class="weather-item-val" id="weather-rain">--%</div>
+          </div>
+          <div class="weather-item">
+            <div class="weather-item-label" data-i18n="condition">Condition</div>
+            <div class="weather-item-val" style="font-size: 0.95rem;" id="weather-condition" data-i18n="loading">Loading...</div>
+          </div>
+        </div>
+        
+        <div id="weather-error-box" class="offline-banner" style="display: none;" data-i18n="weather_unavailable">
+          Weather data currently unavailable.
+        </div>
+
+        <div id="weather-alert-zone">
+          <!-- Dynamically populated weather alerts -->
+        </div>
+      </div>
+
+      <!-- Action Grid -->
+      <div class="dashboard-grid">
+        <div class="dashboard-card" id="btn-dashboard-upload">
+          <div class="dashboard-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <h3 data-i18n="upload_problem_card">Upload Crop Problem</h3>
+          <p data-i18n="upload_problem_card_desc">Upload crop photos from gallery or device</p>
+        </div>
+
+        <div class="dashboard-card" id="btn-dashboard-camera">
+          <div class="dashboard-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </div>
+          <h3 data-i18n="camera_capture_card">Camera Capture</h3>
+          <p data-i18n="camera_capture_card_desc">Diagnose crop using live camera feed</p>
+        </div>
+
+        <div class="dashboard-card" id="btn-dashboard-reports">
+          <div class="dashboard-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <h3 data-i18n="my_reports_card">My Reports</h3>
+          <p data-i18n="my_reports_card_desc">Track K.K TRADERS recommendations</p>
+        </div>
+
+        <div class="dashboard-card" id="btn-dashboard-lang">
+          <div class="dashboard-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <h3 data-i18n="change_language_card">Change Language</h3>
+          <p data-i18n="change_language_card_desc">Choose English, Telugu, or Hindi</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. UPLOAD CROP PROBLEM PAGE -->
+    <section id="view-farmer-upload" class="page-section fade-in">
+      <div style="margin-bottom: 20px;">
+        <button id="upload-back-btn" class="btn btn-secondary btn-sm" style="width: auto; display: inline-flex; align-items: center; gap: 4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span data-i18n="back_to_dashboard">Back to Dashboard</span>
+        </button>
+      </div>
+
+      <div class="upload-flow-container">
+        <h2 style="margin-bottom: 8px; font-weight: 800;" data-i18n="upload_crop_problem_header">Upload Crop Problem</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;" data-i18n="upload_crop_problem_subtitle">Provide details and photos of the crop issue</p>
+
+        <form id="crop-upload-form">
+          
+          <!-- Image Upload Picker Zone -->
+          <div class="form-label" data-i18n="crop_images_label">Crop Images *</div>
+          <div class="image-picker-zone" id="image-drag-zone">
+            <div class="image-picker-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto;">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+            <div class="image-picker-text" data-i18n="image_picker_text_action">Click to upload files or capture photo</div>
+            <div class="image-picker-subtext" data-i18n="image_picker_subtext">You can upload multiple images (Max 3 files)</div>
+            <input type="file" id="file-uploader-input" accept="image/*" multiple style="display: none;">
+          </div>
+
+          <!-- Image Previews Container -->
+          <div id="image-previews-list" class="image-previews-container">
+            <!-- Dynamically rendered preview images -->
+          </div>
+
+          <!-- Fields -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="crop_type">Crop Type *</label>
+            <select id="upload-crop-type" class="form-control" required>
+              <option value="" disabled selected data-i18n="select_crop_option">-- Select Crop Type --</option>
+              <option value="Tomato" data-i18n="crop_tomato">Tomato</option>
+              <option value="Paddy" data-i18n="crop_paddy">Paddy</option>
+              <option value="Cotton" data-i18n="crop_cotton">Cotton</option>
+              <option value="Chilli" data-i18n="crop_chilli">Chilli</option>
+              <option value="Maize" data-i18n="crop_maize">Maize</option>
+              <option value="Groundnut" data-i18n="crop_groundnut">Groundnut</option>
+              <option value="Turmeric" data-i18n="crop_turmeric">Turmeric</option>
+              <option value="Other" data-i18n="crop_other">Other</option>
+            </select>
+          </div>
+
+          <!-- Symptoms Selection -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="select_symptoms">Select Symptoms * (Select all that apply)</label>
+            <div class="symptom-tag-grid">
+              
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-yellow-leaves" value="yellow_leaves">
+                <label for="symp-yellow-leaves" class="symptom-tag-label" data-i18n="symp_yellow_leaves">Yellow Leaves</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-brown-spots" value="brown_spots">
+                <label for="symp-brown-spots" class="symptom-tag-label" data-i18n="symp_brown_spots">Brown Spots</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-leaf-spots" value="leaf_spots">
+                <label for="symp-leaf-spots" class="symptom-tag-label" data-i18n="symp_leaf_spots">Leaf Spots</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-pest-attack" value="pest_attack">
+                <label for="symp-pest-attack" class="symptom-tag-label" data-i18n="symp_pest_attack">Pest Attack</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-holes-leaves" value="holes_leaves">
+                <label for="symp-holes-leaves" class="symptom-tag-label" data-i18n="symp_holes_leaves">Holes in Leaves</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-dry-leaves" value="dry_leaves">
+                <label for="symp-dry-leaves" class="symptom-tag-label" data-i18n="symp_dry_leaves">Dry Leaves</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-wilting" value="wilting">
+                <label for="symp-wilting" class="symptom-tag-label" data-i18n="symp_wilting">Wilting</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-slow-growth" value="slow_growth">
+                <label for="symp-slow-growth" class="symptom-tag-label" data-i18n="symp_slow_growth">Slow Growth</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-nutrient-def" value="nutrient_def">
+                <label for="symp-nutrient-def" class="symptom-tag-label" data-i18n="symp_nutrient_def">Nutrient Deficiency</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-fungal" value="fungal_symptoms">
+                <label for="symp-fungal" class="symptom-tag-label" data-i18n="symp_fungal_symptoms">Fungal Symptoms</label>
+              </div>
+
+              <div class="symptom-tag-card">
+                <input type="checkbox" id="symp-unknown" value="unknown">
+                <label for="symp-unknown" class="symptom-tag-label" data-i18n="symp_unknown">Unknown Problem</label>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="problem_description">Problem Description</label>
+            <textarea id="upload-desc" class="form-control" rows="3" placeholder="Describe the problem, timeline, watering conditions..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="village_location">Village / Location *</label>
+            <input type="text" id="upload-location" class="form-control" placeholder="Village name or GPS location" required>
+          </div>
+
+          <!-- Safety Disclaimer in form -->
+          <div class="disclaimer-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span data-i18n="disclaimer_text">AI diagnosis and fertilizer suggestions are preliminary guidance only. Please confirm with K.K TRADERS or an agriculture expert before applying fertilizer or treatment.</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btn-submit-problem" data-i18n="submit_problem">Submit Crop Problem</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 6. AI DIAGNOSIS RESULT PAGE -->
+    <section id="view-farmer-result" class="page-section fade-in">
+      <div style="margin-bottom: 20px;">
+        <button id="result-back-btn" class="btn btn-secondary btn-sm" style="width: auto;">
+          <span data-i18n="back_to_dashboard">Back to Dashboard</span>
+        </button>
+      </div>
+
+      <div class="diagnosis-container">
+        
+        <div class="diag-analysis-header">
+          <!-- Request status success banner -->
+          <div class="analysis-success-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span data-i18n="request_submitted">Request submitted successfully</span>
+          </div>
+          
+          <h2 data-i18n="ai_analysis_ready">AI-Assisted Crop Analysis</h2>
+          <p data-i18n="ai_analysis_subtitle">Shop owner will review and confirm the recommendation.</p>
+        </div>
+
+        <!-- Main Card layout exactly matching screenshot -->
+        <div class="analysis-card">
+          <!-- Card Header -->
+          <div class="analysis-card-header">
+            <div class="analysis-card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+              <span data-i18n="demo_ai_suggestion">DEMO AI SUGGESTION</span>
+            </div>
+            <div class="analysis-confidence-pill">
+              <span data-i18n="confidence">Demo Confidence</span>: <span id="result-confidence">75%</span>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="analysis-card-body">
+            <!-- Uploaded images (if any) -->
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;" id="result-images-container">
+              <!-- Dynamic uploaded photos -->
+            </div>
+
+            <!-- Two-column Crop / Symptoms info -->
+            <div class="analysis-grid-2">
+              <div class="analysis-info-box">
+                <div class="analysis-info-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                  </svg>
+                  <span data-i18n="crop_type">CROP</span>
+                </div>
+                <div class="analysis-info-val" id="result-crop-name">Tomato</div>
+              </div>
+
+              <div class="analysis-info-box">
+                <div class="analysis-info-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  </svg>
+                  <span data-i18n="reported_symptoms">REPORTED SYMPTOMS</span>
+                </div>
+                <div class="analysis-info-val" id="result-symptoms-list">Yellow leaves</div>
+              </div>
+            </div>
+
+            <!-- Possible Crop Issue -->
+            <div class="analysis-issue-box">
+              <div class="analysis-info-label"><span data-i18n="possible_crop_issue">POSSIBLE CROP ISSUE</span></div>
+              <div class="analysis-issue-val" id="result-ai-problem">Nitrogen deficiency possible</div>
+            </div>
+
+            <!-- Two-column Suggested Category / Usage Note -->
+            <div class="analysis-grid-2">
+              <div class="analysis-info-box highlight-category">
+                <div class="analysis-info-label green-label"><span data-i18n="suggested_category">SUGGESTED CATEGORY</span></div>
+                <div class="analysis-info-val" id="result-category">Nitrogen-rich Fertilizer</div>
+                <div class="analysis-info-subtext">Recommended: <strong id="result-recommended-fertilizer">Urea 46%</strong></div>
+              </div>
+
+              <div class="analysis-info-box highlight-note">
+                <div class="analysis-info-label brown-label"><span data-i18n="usage_note">USAGE NOTE</span></div>
+                <div class="analysis-info-val" style="font-size: 0.95rem; font-weight: 500;" id="result-usage-note">Apply 50kg per acre in two split doses. Water lightly after application.</div>
+              </div>
+            </div>
+
+            <!-- Warning Disclaimer inside the card -->
+            <div class="disclaimer-box" style="margin: 0; background-color: #fffdf5; border-color: #fef0cd;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span data-i18n="disclaimer_text">AI diagnosis and fertilizer suggestions are preliminary guidance only. Please confirm with K.K TRADERS or an agriculture expert before applying fertilizer or treatment.</span>
+            </div>
+
+            <!-- Bottom action buttons inside card -->
+            <div class="analysis-action-buttons">
+              <button id="btn-send-owner-rec" class="btn-send-owner">
+                <span data-i18n="send_to_shop_owner">Send to Shop Owner</span> &rarr;
+              </button>
+              <button id="btn-result-view-reports" class="btn-view-status">
+                View my request status
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 7. FARMER MY REPORTS (HISTORY) -->
+    <section id="view-farmer-reports" class="page-section fade-in">
+      <div style="margin-bottom: 20px;">
+        <button id="reports-back-btn" class="btn btn-secondary btn-sm" style="width: auto;">
+          <span data-i18n="back_to_dashboard">Back to Dashboard</span>
+        </button>
+      </div>
+
+      <h2 style="margin-bottom: 8px; font-weight: 800;" data-i18n="my_reports_title">My Diagnostic Case History</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;" data-i18n="my_reports_subtitle">View and monitor recommendations from K.K TRADERS</p>
+
+      <div id="reports-history-list" class="reports-list-grid">
+        <!-- History cards populate dynamically -->
+      </div>
+    </section>
+
+    <!-- 8. ADMIN DASHBOARD -->
+    <section id="view-admin-dashboard" class="page-section fade-in">
+      <div class="admin-banner">
+        <h2 data-i18n="admin_dashboard_title">K.K TRADERS - Farmer Crop Advisory Panel</h2>
+        <p>Review diagnosis requests, check crop leaf conditions, and send custom fertilizer recommendations to farmers.</p>
+      </div>
+
+      <!-- Stats Banner -->
+      <div class="admin-stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="admin-stat-total">0</div>
+          <div class="stat-label">Total Requests</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="stat-number" id="admin-stat-pending">0</div>
+          <div class="stat-label">Pending Review</div>
+        </div>
+        <div class="stat-card resolved">
+          <div class="stat-number" id="admin-stat-resolved">0</div>
+          <div class="stat-label">Resolved</div>
+        </div>
+      </div>
+
+      <!-- Split Layout for Admin Panel -->
+      <div class="admin-split-layout">
+        <!-- Left Panel: Requests List -->
+        <div class="admin-list-panel">
+          <div class="panel-header">
+            <h3>Recent Requests</h3>
+            <div class="filter-group">
+              <select id="admin-status-filter" class="form-control" style="padding: 4px 8px; font-size: 0.85rem; width: auto; margin-bottom: 0;">
+                <option value="all">All Statuses</option>
+                <option value="AI Analysis Ready">Pending Review</option>
+                <option value="Reviewed">Reviewed</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+          </div>
+          <div id="admin-requests-list" class="admin-requests-list-container">
+            <!-- Requests dynamically populate here -->
+            <p style="text-align: center; color: var(--text-muted); padding: 24px;">Loading farmer requests...</p>
+          </div>
+        </div>
+
+        <!-- Right Panel: Review Detail Form -->
+        <div class="admin-detail-panel" id="admin-detail-panel" style="display: none;">
+          <div class="panel-header">
+            <h3>Review Request</h3>
+            <button id="admin-close-detail-btn" class="btn btn-secondary btn-sm" style="width: auto; padding: 4px 8px;">Close</button>
+          </div>
+          <div class="admin-detail-content" id="admin-detail-content">
+            <!-- Details loaded dynamically -->
+          </div>
+
+          <!-- Advisor Form -->
+          <form id="admin-recommendation-form" class="admin-rec-form">
+            <input type="hidden" id="admin-active-request-id">
+            
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="admin-rec-text">Expert Advice & Final Recommendation *</label>
+              <textarea id="admin-rec-text" class="form-control" rows="3" placeholder="Explain fertilizer dose, timing, and precautions..." required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-product-suggest">Recommended Product / Brand (K.K TRADERS Stock)</label>
+              <input type="text" id="admin-product-suggest" class="form-control" placeholder="e.g., Coromandel Urea / Sagarika Liquid">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-rec-status">Action Status</label>
+              <select id="admin-rec-status" class="form-control" required>
+                <option value="Reviewed">Reviewed (Provide Feedback)</option>
+                <option value="Resolved">Resolved (Advisory Closed)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btn-admin-submit-rec">Submit Expert Advice</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  <!-- 11. CAMERA CAPTURE OVERLAY -->
+  <div id="camera-overlay" class="camera-overlay">
+    <div class="camera-box">
+      <div style="padding: 12px; background-color: #121212; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222;">
+        <span style="color: white; font-weight: bold; font-family: var(--font-title);" data-i18n="camera_live">Live Camera Feed</span>
+        <button id="camera-close-btn" class="camera-close-btn">&times;</button>
+      </div>
+      <video id="camera-video" class="camera-video" autoplay playsinline></video>
+      <canvas id="camera-canvas" style="display: none;"></canvas>
+      <div class="camera-controls">
+        <button id="camera-shutter-btn" class="camera-shutter-btn" title="Capture Image"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. IMAGE ZOOM MODAL -->
+  <div id="zoom-overlay" class="zoom-overlay">
+    <img id="zoom-img" class="zoom-img" src="" alt="Zoomed Crop Problem Image">
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Firebase SDKs (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="src/firebase.js"></script>
+
+  <!-- Application script file -->
+  <script src="app.js"></script>
+</body>
+</html>

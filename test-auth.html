@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firestore Auth Test Page</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="src/firebase.js"></script>
+</head>
+<body>
+  <h1>Firestore Write and Read Test</h1>
+  <div>
+    <h3>Step 1: Sign in</h3>
+    <input type="email" id="email" value="ramesh@gmail.com">
+    <input type="password" id="password" value="009876">
+    <button onclick="signIn()">Sign In</button>
+    <button onclick="signUp()">Sign Up New User</button>
+  </div>
+  <hr>
+  <div>
+    <h3>Step 2: Test Firestore Write</h3>
+    <button onclick="testWriteFull()">Write Full Profile</button>
+    <button onclick="testWriteNoTimestamp()">Write No Timestamp</button>
+    <button onclick="testWriteMinimal()">Write Minimal (only uid/role)</button>
+    <button onclick="testWriteRoleAdmin()">Write Role Admin</button>
+    <button onclick="testWriteOtherCollection()">Write to 'test' Collection</button>
+  </div>
+  <hr>
+  <div>
+    <h3>Step 3: Test Firestore Read</h3>
+    <button onclick="testRead()">Read Profile</button>
+  </div>
+  <hr>
+  <div id="status" style="white-space: pre-wrap; background: #eee; padding: 10px; font-family: monospace;">Ready...</div>
+
+  <script>
+    const statusDiv = document.getElementById('status');
+    function log(msg) {
+      statusDiv.textContent += "\n" + msg;
+      console.log(msg);
+    }
+
+    async function signIn() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      try {
+        log(`Signing in with ${email}...`);
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+        log(`Signed in! User UID: ${cred.user.uid}`);
+      } catch (e) {
+        log(`Sign in failed: ${e.message}`);
+      }
+    }
+
+    async function signUp() {
+      const email = `test_${Date.now()}@gmail.com`;
+      const password = 'password123';
+      try {
+        log(`Signing up new user: ${email}...`);
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        log(`Signed up! User UID: ${cred.user.uid}`);
+      } catch (e) {
+        log(`Sign up failed: ${e.message}`);
+      }
+    }
+
+    async function testWriteFull() {
+      const user = auth.currentUser;
+      if (!user) {
+        log("No user signed in!");
+        return;
+      }
+      const docData = {
+        uid: user.uid,
+        name: "Test User",
+        email: user.email,
+        mobile: "1234567890",
+        role: "farmer",
+        village: "Test Village",
+        district: "Test District",
+        preferredLanguage: "en",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      log(`Attempting to write full profile to users/${user.uid}...`);
+      try {
+        await db.collection('users').doc(user.uid).set(docData);
+        log("Full profile write SUCCESS!");
+      } catch (e) {
+        log(`Full profile write FAILED: ${e.message}`);
+      }
+    }
+
+    async function testWriteNoTimestamp() {
+      const user = auth.currentUser;
+      if (!user) {
+        log("No user signed in!");
+        return;
+      }
+      const docData = {
+        uid: user.uid,
+        name: "Test User",
+        email: user.email,
+        mobile: "1234567890",
+        role: "farmer",
+        village: "Test Village",
+        district: "Test District",
+        preferredLanguage: "en"
+      };
+      log(`Attempting to write profile (no timestamp) to users/${user.uid}...`);
+      try {
+        await db.collection('users').doc(user.uid).set(docData);
+        log("No-timestamp write SUCCESS!");
+      } catch (e) {
+        log(`No-timestamp write FAILED: ${e.message}`);
+      }
+    }
+
+    async function testWriteMinimal() {
+      const user = auth.currentUser;
+      if (!user) {
+        log("No user signed in!");
+        return;
+      }
+      const docData = {
+        uid: user.uid,
+        role: "farmer"
+      };
+      log(`Attempting to write minimal profile to users/${user.uid}...`);
+      try {
+        await db.collection('users').doc(user.uid).set(docData);
+        log("Minimal write SUCCESS!");
+      } catch (e) {
+        log(`Minimal write FAILED: ${e.message}`);
+      }
+    }
+
+    async function testWriteRoleAdmin() {
+      const user = auth.currentUser;
+      if (!user) {
+        log("No user signed in!");
+        return;
+      }
+      const docData = {
+        uid: user.uid,
+        name: "Test Admin",
+        email: user.email,
+        mobile: "1234567890",
+        role: "admin",
+        village: "Admin City",
+        district: "Admin Dist",
+        preferredLanguage: "en",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      log(`Attempting to write admin profile to users/${user.uid}...`);
+      try {
+        await db.collection('users').doc(user.uid).set(docData);
+        log("Admin profile write SUCCESS!");
+      } catch (e) {
+        log(`Admin profile write FAILED: ${e.message}`);
+      }
+    }
+
+    async function testWriteOtherCollection() {
+      const user = auth.currentUser;
+      if (!user) {
+        log("No user signed in!");
+        return;
+      }
+      log(`Attempting to write to 'test/${user.uid}'...`);
+      try {
+        await db.collection('test').doc(user.uid).set({ test: true });
+        log("Write to 'test' SUCCESS!");
+      } catch (e) {
+        log(`Write to 'test' FAILED: ${e.message}`);
+      }
+    }
+
+    async function testRead() {
+      const user = auth.currentUser;
+      if (!user) {
+        log("No user signed in!");
+        return;
+      }
+      log(`Attempting to read users/${user.uid}...`);
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          log(`Read SUCCESS! Data: ${JSON.stringify(doc.data())}`);
+        } else {
+          log("Read SUCCESS, but document does not exist.");
+        }
+      } catch (e) {
+        log(`Read FAILED: ${e.message}`);
+      }
+    }
+  </script>
+</body>
+</html>

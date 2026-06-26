@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Squircle Background Green -->
+  <rect width="512" height="512" rx="160" fill="#4caf50" />
+  
+  <!-- White Seedling Graphic -->
+  <g fill="#ffffff">
+    <!-- Seed/Bean at the bottom -->
+    <path d="M 235,372 C 220,378 222,392 238,397 C 255,402 278,397 282,388 C 286,378 274,368 255,368 C 245,368 238,370 235,372 Z" />
+    
+    <!-- Stem connecting seed and leaves -->
+    <path d="M 252,375 C 248,340 252,310 257,280 C 259,270 261,250 262,240 C 257,240 255,245 253,248 L 247,242 C 250,236 254,232 263,232 C 266,232 266,250 264,270 C 259,300 256,335 258,375 Z" />
+    
+    <!-- Left Leaf (smaller, pointing up-left) -->
+    <path d="M 252,284 C 235,290 200,285 180,265 C 160,245 158,220 158,205 C 165,200 185,198 210,215 C 235,232 250,260 252,284 Z" />
+    
+    <!-- Right Leaf (larger, pointing up-right) -->
+    <path d="M 261,255 C 258,225 268,185 290,160 C 310,138 338,130 348,135 C 350,148 342,175 320,205 C 298,235 272,250 261,255 Z" />
+  </g>
+</svg>
