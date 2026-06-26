@@ -371,8 +371,19 @@ function checkAuthAndRoute() {
   if (headerBName) headerBName.textContent = "K.K TRADERS";
 
   if (!currentUser) {
-    showPage('view-login');
-  } else if (currentUserProfile && currentUserProfile.role === 'admin') {
+    currentUser = { uid: "default_farmer_uid" };
+    currentUserProfile = {
+      uid: "default_farmer_uid",
+      name: "Farmer Demo",
+      mobile: "9876543210",
+      role: "farmer",
+      village: "Kodur",
+      district: "Kadapa",
+      preferredLanguage: "en"
+    };
+  }
+
+  if (currentUserProfile && currentUserProfile.role === 'admin') {
     showPage('view-admin-dashboard');
   } else {
     showPage('view-farmer-dashboard');
@@ -1326,6 +1337,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const toggleBtn = document.getElementById('toggle-role-btn');
+
     if (user) {
       currentUser = user;
       console.log("Login Firebase UID:", user.uid);
@@ -1335,48 +1348,72 @@ document.addEventListener('DOMContentLoaded', () => {
           currentUserProfile = userDoc.data();
           
           if (!currentUserProfile.role) {
-            console.log("User role not found for UID:", user.uid);
-            showToast("Error", "User role not found. Please contact support.", "danger");
-            await auth.signOut();
-            return;
+            currentUserProfile.role = 'farmer';
           }
 
           console.log("User role found:", currentUserProfile.role);
           
           // Apply Language
           setLanguage(currentUserProfile.preferredLanguage || currentLanguage);
-          document.getElementById('signout-btn').style.display = 'block';
+          document.getElementById('signout-btn').style.display = 'none'; // Hide signout to keep it simple
           
           // Show proper dashboard based on role
           if (currentUserProfile.role.toLowerCase() === 'admin') {
             document.body.classList.add('owner-theme');
             document.getElementById('notification-btn').style.display = 'none';
+            if (toggleBtn) toggleBtn.textContent = 'Farmer View';
             showPage('view-admin-dashboard');
             setupAdminRequestsListener();
-          } else if (currentUserProfile.role.toLowerCase() === 'farmer') {
+          } else {
             document.body.classList.remove('owner-theme');
             document.getElementById('notification-btn').style.display = 'block';
+            if (toggleBtn) toggleBtn.textContent = 'Admin Panel';
             showPage('view-farmer-dashboard');
             setupFarmerRequestsListener();
             setupNotificationsListener();
-          } else {
-            console.log("Invalid role for UID:", user.uid);
-            showToast("Error", "User role not found. Please contact support.", "danger");
-            await auth.signOut();
           }
         } else {
           console.log("User profile document not found in Firestore for UID:", user.uid);
-          showToast("Error", "User role not found. Please contact support.", "danger");
-          await auth.signOut();
+          const defaultProfile = {
+            uid: user.uid,
+            name: "Farmer Demo",
+            email: user.email || "farmer_demo@kktraders.com",
+            mobile: "9876543210",
+            role: "farmer",
+            village: "Kodur",
+            district: "Kadapa",
+            preferredLanguage: "en",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          try {
+            await db.collection('users').doc(user.uid).set(defaultProfile);
+            currentUserProfile = defaultProfile;
+          } catch (e) {
+            console.error("Firestore auto profile creation failed, using memory fallback", e);
+            currentUserProfile = defaultProfile;
+          }
+          document.body.classList.remove('owner-theme');
+          document.getElementById('notification-btn').style.display = 'block';
+          if (toggleBtn) toggleBtn.textContent = 'Admin Panel';
+          showPage('view-farmer-dashboard');
+          setupFarmerRequestsListener();
+          setupNotificationsListener();
         }
       } catch (err) {
         console.error("Auth profile sync error:", err);
-        showToast("Error", "Failed syncing profile credentials from Firestore: " + translateFirebaseError(err.code || err.message), "danger");
-        try {
-          await auth.signOut();
-        } catch (signOutErr) {
-          console.error("Signout after sync error failed:", signOutErr);
-        }
+        currentUserProfile = {
+          uid: user.uid,
+          name: "Farmer Demo",
+          role: "farmer",
+          village: "Kodur",
+          preferredLanguage: "en"
+        };
+        document.body.classList.remove('owner-theme');
+        document.getElementById('notification-btn').style.display = 'block';
+        if (toggleBtn) toggleBtn.textContent = 'Admin Panel';
+        showPage('view-farmer-dashboard');
+        setupFarmerRequestsListener();
+        setupNotificationsListener();
       }
     } else {
       currentUser = null;
@@ -1390,7 +1427,24 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('signout-btn').style.display = 'none';
       document.getElementById('notification-btn').style.display = 'none';
       document.body.classList.remove('owner-theme');
-      showPage('view-login');
+      
+      // Try signing in anonymously to avoid showing the login screen
+      console.log("No authenticated user, signing in anonymously...");
+      try {
+        await auth.signInAnonymously();
+      } catch (err) {
+        console.error("Anonymous login failed, falling back to mock user", err);
+        currentUser = { uid: "mock_user_123" };
+        currentUserProfile = {
+          uid: "mock_user_123",
+          name: "Farmer Demo",
+          role: "farmer",
+          village: "Kodur",
+          preferredLanguage: "en"
+        };
+        if (toggleBtn) toggleBtn.textContent = 'Admin Panel';
+        showPage('view-farmer-dashboard');
+      }
     }
   });
 
@@ -1531,6 +1585,31 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('header-logo-click').onclick = () => {
     checkAuthAndRoute();
   };
+
+  // View Toggle Button click event
+  const toggleBtn = document.getElementById('toggle-role-btn');
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      if (currentUserProfile && currentUserProfile.role === 'farmer') {
+        currentUserProfile.role = 'admin';
+        currentUserProfile.name = 'K.K TRADERS';
+        document.body.classList.add('owner-theme');
+        document.getElementById('notification-btn').style.display = 'none';
+        toggleBtn.textContent = 'Farmer View';
+        showPage('view-admin-dashboard');
+        setupAdminRequestsListener();
+      } else {
+        currentUserProfile.role = 'farmer';
+        currentUserProfile.name = 'Farmer Demo';
+        document.body.classList.remove('owner-theme');
+        document.getElementById('notification-btn').style.display = 'block';
+        toggleBtn.textContent = 'Admin Panel';
+        showPage('view-farmer-dashboard');
+        setupFarmerRequestsListener();
+        setupNotificationsListener();
+      }
+    };
+  }
 
   // Dashboard grid clicks - reset form when navigating to upload
   document.getElementById('btn-dashboard-upload').onclick = () => {
