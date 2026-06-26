@@ -477,24 +477,41 @@
               </div>
             </div>
 
-            <!-- Possible Crop Issue -->
+            <!-- Disease Prediction -->
             <div class="analysis-issue-box">
-              <div class="analysis-info-label"><span data-i18n="possible_crop_issue">POSSIBLE CROP ISSUE</span></div>
-              <div class="analysis-issue-val" id="result-ai-problem">Nitrogen deficiency possible</div>
+              <div class="analysis-info-label"><span data-i18n="disease_prediction">DISEASE PREDICTION</span></div>
+              <div class="analysis-issue-val" id="result-disease-prediction">Nitrogen deficiency possible</div>
             </div>
 
-            <!-- Two-column Suggested Category / Usage Note -->
-            <div class="analysis-grid-2">
-              <div class="analysis-info-box highlight-category">
-                <div class="analysis-info-label green-label"><span data-i18n="suggested_category">SUGGESTED CATEGORY</span></div>
-                <div class="analysis-info-val" id="result-category">Nitrogen-rich Fertilizer</div>
-                <div class="analysis-info-subtext">Recommended: <strong id="result-recommended-fertilizer">Urea 46%</strong></div>
+            <!-- Possible Causes -->
+            <div class="analysis-issue-box" style="margin-top: 16px;">
+              <div class="analysis-info-label"><span data-i18n="possible_causes">POSSIBLE CAUSES</span></div>
+              <div class="analysis-issue-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4;" id="result-possible-causes">--</div>
+            </div>
+
+            <!-- Fertilizer Recommendation -->
+            <div class="analysis-issue-box" style="margin-top: 16px; border-left-color: var(--success); background-color: #f0fdf4;">
+              <div class="analysis-info-label green-label"><span data-i18n="fertilizer_recommendation">FERTILIZER RECOMMENDATION</span></div>
+              <div class="analysis-issue-val" style="font-size: 1rem; font-weight: 600; color: var(--primary-dark);" id="result-fertilizer-recommendation">--</div>
+            </div>
+
+            <!-- Two-column Treatments -->
+            <div class="analysis-grid-2" style="margin-top: 16px;">
+              <div class="analysis-info-box highlight-category" style="border-left-color: var(--accent); background-color: #f4fbf7;">
+                <div class="analysis-info-label green-label"><span data-i18n="organic_treatment">ORGANIC TREATMENT</span></div>
+                <div class="analysis-info-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4;" id="result-organic-treatment">--</div>
               </div>
 
-              <div class="analysis-info-box highlight-note">
-                <div class="analysis-info-label brown-label"><span data-i18n="usage_note">USAGE NOTE</span></div>
-                <div class="analysis-info-val" style="font-size: 0.95rem; font-weight: 500;" id="result-usage-note">Apply 50kg per acre in two split doses. Water lightly after application.</div>
+              <div class="analysis-info-box highlight-note" style="border-left-color: var(--danger); background-color: #fef2f2;">
+                <div class="analysis-info-label red-label"><span data-i18n="chemical_treatment">CHEMICAL TREATMENT</span></div>
+                <div class="analysis-info-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4;" id="result-chemical-treatment">--</div>
               </div>
+            </div>
+
+            <!-- Prevention Tips -->
+            <div class="analysis-issue-box" style="margin-top: 16px; border-left-color: var(--info); background-color: #eff6ff; margin-bottom: 20px;">
+              <div class="analysis-info-label blue-label"><span data-i18n="prevention_tips">PREVENTION TIPS</span></div>
+              <div class="analysis-issue-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4; color: #1e3a8a;" id="result-prevention-tips">--</div>
             </div>
 
             <!-- Warning Disclaimer inside the card -->

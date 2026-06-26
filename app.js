@@ -838,11 +838,23 @@ async function handleFarmerSubmit(e) {
       symptoms: symptoms,
       description: description,
       images: imageUrls,
-      aiProblem: diagnosis.problem,
-      aiCategory: diagnosis.category,
-      aiRecommended: diagnosis.recommended,
-      aiUsageNote: diagnosis.usageNote,
-      aiConfidence: diagnosis.confidence,
+      
+      // New structured Gemini fields
+      diseasePrediction: diagnosis.diseasePrediction,
+      possibleCauses: diagnosis.possibleCauses,
+      fertilizerRecommendation: diagnosis.fertilizerRecommendation,
+      organicTreatment: diagnosis.organicTreatment,
+      chemicalTreatment: diagnosis.chemicalTreatment,
+      preventionTips: diagnosis.preventionTips,
+      confidence: diagnosis.confidence,
+      
+      // Legacy fallback fields
+      aiProblem: diagnosis.diseasePrediction || diagnosis.problem || 'General Lack',
+      aiCategory: diagnosis.fertilizerRecommendation || diagnosis.category || 'Nutrients',
+      aiRecommended: diagnosis.chemicalTreatment || diagnosis.recommended || 'N/A',
+      aiUsageNote: diagnosis.organicTreatment || diagnosis.usageNote || 'N/A',
+      aiConfidence: diagnosis.confidence || '75%',
+      
       status: 'AI Analysis Ready',
       submittedDate: new Date().toISOString().split('T')[0],
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -918,25 +930,34 @@ function renderAIResultPage(report) {
 
   const cardTitle = document.querySelector('.analysis-card-title span');
   const confidencePill = document.getElementById('result-confidence');
-  const mainProblemVal = document.getElementById('result-ai-problem');
-  const suggestedCategory = document.getElementById('result-category');
-  const recommendedFertilizer = document.getElementById('result-recommended-fertilizer');
-  const usageNotes = document.getElementById('result-usage-note');
+
+  const diseasePrediction = document.getElementById('result-disease-prediction');
+  const possibleCauses = document.getElementById('result-possible-causes');
+  const fertilizerRecommendation = document.getElementById('result-fertilizer-recommendation');
+  const organicTreatment = document.getElementById('result-organic-treatment');
+  const chemicalTreatment = document.getElementById('result-chemical-treatment');
+  const preventionTips = document.getElementById('result-prevention-tips');
 
   if (report.status === 'Reviewed' || report.status === 'Resolved') {
     cardTitle.textContent = "K.K TRADERS RECOMMENDED";
     confidencePill.textContent = "Verified Advisory";
-    mainProblemVal.textContent = report.aiProblem || 'Advisory Closed';
-    suggestedCategory.textContent = report.adminRecommendation || 'Expert guidance provided';
-    recommendedFertilizer.textContent = report.adminProductSuggestion || 'N/A';
-    usageNotes.textContent = report.adminRecommendation || '';
+    
+    if (diseasePrediction) diseasePrediction.textContent = report.aiProblem || report.diseasePrediction || 'Advisory Closed';
+    if (possibleCauses) possibleCauses.textContent = report.possibleCauses || 'Reviewed by Shop Owner';
+    if (fertilizerRecommendation) fertilizerRecommendation.textContent = report.adminProductSuggestion || report.aiRecommended || 'N/A';
+    if (organicTreatment) organicTreatment.textContent = 'Expert advice provided by shop owner.';
+    if (chemicalTreatment) chemicalTreatment.textContent = report.adminRecommendation || 'No chemical treatment specified.';
+    if (preventionTips) preventionTips.textContent = report.preventionTips || 'Review final recommendations closely.';
   } else {
     cardTitle.textContent = "DEMO AI SUGGESTION";
-    confidencePill.textContent = report.aiConfidence || '75%';
-    mainProblemVal.textContent = report.aiProblem;
-    suggestedCategory.textContent = report.aiCategory || 'General Nutrient';
-    recommendedFertilizer.textContent = report.aiRecommended || 'NPK 19-19-19';
-    usageNotes.textContent = report.aiUsageNote || '';
+    confidencePill.textContent = report.aiConfidence || report.confidence || '75%';
+    
+    if (diseasePrediction) diseasePrediction.textContent = report.diseasePrediction || report.aiProblem || 'N/A';
+    if (possibleCauses) possibleCauses.textContent = report.possibleCauses || 'N/A';
+    if (fertilizerRecommendation) fertilizerRecommendation.textContent = report.fertilizerRecommendation || report.aiCategory || 'N/A';
+    if (organicTreatment) organicTreatment.textContent = report.organicTreatment || report.aiUsageNote || 'N/A';
+    if (chemicalTreatment) chemicalTreatment.textContent = report.chemicalTreatment || report.aiRecommended || 'N/A';
+    if (preventionTips) preventionTips.textContent = report.preventionTips || 'N/A';
   }
 }
 
