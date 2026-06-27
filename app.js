@@ -1,5 +1,7 @@
 // AgroAssist Core Application Logic (Firebase Connected PWA)
 
+const GEMINI_API_KEY = "AQ.Ab8RN6LDJ10U-MsxWbZqFgaZOtVB3DLQr4QFTvuEqXUhDMNUxA"; // Update with actual API key
+
 // 1. LOCALIZATION DICTIONARY
 const translations = {
   en: {
@@ -383,7 +385,7 @@ function checkAuthAndRoute() {
 function setLanguage(lang) {
   currentLanguage = lang;
   document.getElementById('lang-select').value = lang;
-  
+
   // Translate everything matching data-i18n tags
   document.querySelectorAll('[data-i18n]').forEach(element => {
     const translationKey = element.getAttribute('data-i18n');
@@ -555,9 +557,9 @@ function captureVideoFrame() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
+
     const base64Data = canvas.toDataURL('image/jpeg');
-    
+
     if (uploadedImages.length < 3) {
       uploadedImages.push(base64Data);
       renderImagePreviews();
@@ -640,10 +642,10 @@ function renderImagePreviews() {
   uploadedImages.forEach((img, idx) => {
     const card = document.createElement('div');
     card.className = 'image-preview-card fade-in';
-    
+
     const image = document.createElement('img');
     image.src = img;
-    
+
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove-img-btn';
     removeBtn.innerHTML = '&times;';
@@ -792,73 +794,117 @@ async function handleFarmerSubmit(e) {
 
   const btn = document.getElementById('btn-submit-problem');
   btn.disabled = true;
-  btn.innerHTML = `<span class="spinner"></span> Uploading & Diagnosing...`;
+  btn.innerHTML = `<span class="spinner"></span> Analyzing crop using Gemini AI...`;
 
   try {
-    console.log("Image upload started");
-    showToast("Uploading Images", "Uploading crop photos to Firebase Storage...", "info");
-    const imageUrls = await uploadImagesToStorage(currentUser.uid, uploadedImages);
-    console.log("Image upload completed");
-
     let diagnosis = null;
     console.log("AI diagnosis started");
-    try {
-      // Call secure Vercel Serverless Function
-      const diagResponse = await fetch('/api/diagnose', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          cropType: cropType,
-          symptoms: symptoms,
-          description: description,
-          images: uploadedImages // Send base64 images
-        })
-      });
 
-      if (!diagResponse.ok) {
-        throw new Error(`Server returned error status ${diagResponse.status}`);
-      }
-
-      diagnosis = await diagResponse.json();
-      console.log("AI diagnosis completed");
-    } catch (apiErr) {
-      console.warn("Secure Gemini API call failed. Using local rule-based fallback:", apiErr);
-      diagnosis = calculateAIDiagnosis(cropType, symptoms);
-      console.log("AI diagnosis completed (Local Fallback)");
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      throw new Error("Gemini API key not configured");
     }
 
+    try {
+      if (!window.GoogleGenerativeAI) {
+        throw new Error("Google Generative AI SDK not loaded yet. Please try again.");
+      }
+
+      const genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const base64Data = uploadedImages[0].split(',')[1];
+      const mimeType = uploadedImages[0].match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
+
+      const promptText = `You are an expert crop pathologist and agronomist. 
+Analyze the provided crop leaf image, along with the following farmer-reported details:
+- Crop Type: ${cropType}
+- Symptoms Selected: ${symptoms.join(', ')}
+- Farmer Description: ${description || 'No additional description provided.'}
+
+Provide an AI-assisted preliminary diagnosis, possible causes, prevention tips, and fertilizer & treatment recommendations.
+You MUST return ONLY a valid, raw JSON object matching this JSON schema exactly (do NOT wrap it in markdown blocks like \`\`\`json, return only the plain JSON string):
+{
+  "diseasePrediction": "Name of the crop disease or leaf problem diagnosed",
+  "possibleCauses": "Brief description of the possible causes for this crop problem",
+  "fertilizerRecommendation": "Fertilizer recommendation details (e.g. type, concentration, dosage, timing)",
+  "organicTreatment": "Details of suitable organic treatment or natural remedies",
+  "chemicalTreatment": "Details of suitable chemical treatment (if needed, otherwise N/A)",
+  "preventionTips": "Tips to prevent this issue from recurring in the future",
+  "confidence": "Estimated confidence percentage (e.g. 85%)"
+}`;
+
+      const imagePart = {
+        inlineData: {
+          data: base64Data,
+          mimeType: mimeType
+        }
+      };
+
+      const result = await model.generateContent([promptText, imagePart]);
+      const response = await result.response;
+      let text = response.text();
+
+      let cleanJsonStr = text.trim();
+      if (cleanJsonStr.startsWith('```json')) {
+        cleanJsonStr = cleanJsonStr.replace(/^```json/, '').replace(/```$/, '').trim();
+      } else if (cleanJsonStr.startsWith('```')) {
+        cleanJsonStr = cleanJsonStr.replace(/^```/, '').replace(/```$/, '').trim();
+      }
+
+      diagnosis = JSON.parse(cleanJsonStr);
+      console.log("AI diagnosis completed");
+    } catch (apiErr) {
+      console.error("Gemini API error:", apiErr);
+      if (apiErr.message === "Gemini API key not configured" || (apiErr.message && apiErr.message.includes("API_KEY_INVALID"))) {
+        throw new Error("Gemini API key not configured");
+      }
+      console.warn("Using local rule-based fallback...");
+      diagnosis = calculateAIDiagnosis(cropType, symptoms);
+    }
+
+    // Fallback constants
+    const fbPrediction = "Possible nutrient deficiency or crop stress";
+    const fbCause = "Based on selected symptoms, the issue may be related to nutrient deficiency, pest attack, water stress, or disease.";
+    const fbFertilizer = "Use balanced NPK fertilizer or micronutrient mixture only after confirmation from K.K TRADERS.";
+    const fbTreatment = "Avoid applying fertilizer or pesticide blindly. Owner verification is required.";
+    const fbPrecautions = "Check soil moisture, avoid waterlogging, observe pest presence, and consult K.K TRADERS.";
+
     const newRequest = {
-      userId: currentUser.uid,
+      userId: currentUser.uid || '',
       farmerName: currentUserProfile ? (currentUserProfile.fullName || currentUserProfile.name || 'Farmer') : 'Farmer',
-      farmerMobile: currentUserProfile ? currentUserProfile.mobile : '',
-      village: location,
-      cropType: cropType,
-      symptoms: symptoms,
-      description: description,
-      images: imageUrls,
-      
-      // New structured Gemini fields
-      diseasePrediction: diagnosis.diseasePrediction,
-      possibleCauses: diagnosis.possibleCauses,
-      fertilizerRecommendation: diagnosis.fertilizerRecommendation,
-      organicTreatment: diagnosis.organicTreatment,
-      chemicalTreatment: diagnosis.chemicalTreatment,
-      preventionTips: diagnosis.preventionTips,
-      confidence: diagnosis.confidence,
-      
+      farmerMobile: currentUserProfile ? (currentUserProfile.mobile || '') : '',
+      village: location || '',
+      cropType: cropType || '',
+      symptoms: Array.isArray(symptoms) ? symptoms : [],
+      description: description || '',
+
+      // New structured Gemini fields with strict fallbacks
+      diseasePrediction: (diagnosis && diagnosis.diseasePrediction) || fbPrediction,
+      possibleCauses: (diagnosis && diagnosis.possibleCauses) || fbCause,
+      fertilizerRecommendation: (diagnosis && diagnosis.fertilizerRecommendation) || fbFertilizer,
+      organicTreatment: (diagnosis && diagnosis.organicTreatment) || fbTreatment,
+      chemicalTreatment: (diagnosis && diagnosis.chemicalTreatment) || fbTreatment,
+      preventionTips: (diagnosis && diagnosis.preventionTips) || fbPrecautions,
+      confidence: (diagnosis && diagnosis.confidence) || "70%",
+
       // Legacy fallback fields
-      aiProblem: diagnosis.diseasePrediction || diagnosis.problem || 'General Lack',
-      aiCategory: diagnosis.fertilizerRecommendation || diagnosis.category || 'Nutrients',
-      aiRecommended: diagnosis.chemicalTreatment || diagnosis.recommended || 'N/A',
-      aiUsageNote: diagnosis.organicTreatment || diagnosis.usageNote || 'N/A',
-      aiConfidence: diagnosis.confidence || '75%',
-      
+      aiProblem: (diagnosis && (diagnosis.diseasePrediction || diagnosis.problem)) || fbPrediction,
+      aiCategory: (diagnosis && (diagnosis.fertilizerRecommendation || diagnosis.category)) || 'Nutrients',
+      aiRecommended: (diagnosis && (diagnosis.chemicalTreatment || diagnosis.recommended)) || fbTreatment,
+      aiUsageNote: (diagnosis && (diagnosis.organicTreatment || diagnosis.usageNote)) || fbTreatment,
+      aiConfidence: (diagnosis && diagnosis.confidence) || '70%',
+
       status: 'AI Analysis Ready',
       submittedDate: new Date().toISOString().split('T')[0],
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
+
+    // Sanitize object to guarantee no undefined values for Firestore
+    Object.keys(newRequest).forEach(key => {
+      if (newRequest[key] === undefined) {
+        newRequest[key] = '';
+      }
+    });
 
     const docRef = await db.collection('farmerRequests').add(newRequest);
     newRequest.id = docRef.id;
@@ -867,6 +913,8 @@ async function handleFarmerSubmit(e) {
     // Add notification
     await addNotification(currentUser.uid, translations[currentLanguage].notification_submitted, 'info');
 
+    // Attach images for local display but don't save to firestore
+    newRequest.images = uploadedImages;
     renderAIResultPage(newRequest);
 
     uploadedImages = [];
@@ -886,31 +934,11 @@ async function handleFarmerSubmit(e) {
   }
 }
 
-// Storage upload helper with individual error handling
-async function uploadImagesToStorage(userId, base64Images) {
-  const downloadUrls = [];
-  for (let i = 0; i < base64Images.length; i++) {
-    try {
-      const base64Str = base64Images[i];
-      const imageId = Date.now() + '_' + i;
-      const ref = storage.ref().child(`crop_photos/${userId}/${imageId}.jpg`);
-      const snapshot = await ref.putString(base64Str, 'data_url');
-      const url = await snapshot.ref.getDownloadURL();
-      downloadUrls.push(url);
-    } catch (err) {
-      console.error(`Image ${i + 1} upload failed:`, err);
-      showToast("Upload Error", `Image ${i + 1} failed to upload: ${err.message}. Skipping.`, "warning");
-    }
-  }
-  if (downloadUrls.length === 0 && base64Images.length > 0) {
-    throw new Error("All images failed to upload. Please try again.");
-  }
-  return downloadUrls;
-}
+
 
 function renderAIResultPage(report) {
   document.getElementById('result-crop-name').textContent = report.cropType;
-  
+
   const translatedSymptoms = report.symptoms.map(s => translations[currentLanguage][`symp_${s}`] || s).join(', ');
   document.getElementById('result-symptoms-list').textContent = translatedSymptoms;
 
@@ -941,7 +969,7 @@ function renderAIResultPage(report) {
   if (report.status === 'Reviewed' || report.status === 'Resolved') {
     cardTitle.textContent = "K.K TRADERS RECOMMENDED";
     confidencePill.textContent = "Verified Advisory";
-    
+
     if (diseasePrediction) diseasePrediction.textContent = report.aiProblem || report.diseasePrediction || 'Advisory Closed';
     if (possibleCauses) possibleCauses.textContent = report.possibleCauses || 'Reviewed by Shop Owner';
     if (fertilizerRecommendation) fertilizerRecommendation.textContent = report.adminProductSuggestion || report.aiRecommended || 'N/A';
@@ -951,7 +979,7 @@ function renderAIResultPage(report) {
   } else {
     cardTitle.textContent = "DEMO AI SUGGESTION";
     confidencePill.textContent = report.aiConfidence || report.confidence || '75%';
-    
+
     if (diseasePrediction) diseasePrediction.textContent = report.diseasePrediction || report.aiProblem || 'N/A';
     if (possibleCauses) possibleCauses.textContent = report.possibleCauses || 'N/A';
     if (fertilizerRecommendation) fertilizerRecommendation.textContent = report.fertilizerRecommendation || report.aiCategory || 'N/A';
@@ -964,10 +992,10 @@ function renderAIResultPage(report) {
 // Real-time user reports history loader
 function setupFarmerRequestsListener() {
   if (farmerRequestsListener) farmerRequestsListener(); // unsubscribe
-  
+
   const container = document.getElementById('reports-history-list');
   container.innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 0.95rem; padding: 40px 0;">Loading history...</p>`;
-  
+
   farmerRequestsListener = db.collection('farmerRequests')
     .where('userId', '==', currentUser.uid)
     .onSnapshot((snapshot) => {
@@ -992,7 +1020,7 @@ function setupFarmerRequestsListener() {
       reports.forEach(r => {
         const card = document.createElement('div');
         card.className = 'report-row-card fade-in';
-        
+
         const img = document.createElement('img');
         img.src = r.images[0] || 'logo.svg';
         img.className = 'report-row-thumb';
@@ -1033,10 +1061,10 @@ function setupFarmerRequestsListener() {
 // 9. ADMIN DASHBOARD OPERATIONS
 function setupAdminRequestsListener() {
   if (adminRequestsListener) adminRequestsListener(); // unsubscribe
-  
+
   const container = document.getElementById('admin-requests-list');
   const filterSelect = document.getElementById('admin-status-filter');
-  
+
   const renderList = (snapshot) => {
     container.innerHTML = '';
     const requests = [];
@@ -1108,12 +1136,12 @@ function setupAdminRequestsListener() {
 function loadAdminRequestDetail(request) {
   activeReportId = request.id;
   document.getElementById('admin-active-request-id').value = request.id;
-  
+
   const detailPanel = document.getElementById('admin-detail-panel');
   const detailContent = document.getElementById('admin-detail-content');
-  
+
   detailPanel.style.display = 'flex';
-  
+
   const translatedSymptoms = request.symptoms.map(s => translations[currentLanguage][`symp_${s}`] || s).join(', ');
 
   detailContent.innerHTML = `
@@ -1167,12 +1195,12 @@ function loadAdminRequestDetail(request) {
 
 async function handleAdminSubmitRec(e) {
   e.preventDefault();
-  
+
   const requestId = document.getElementById('admin-active-request-id').value;
   const recommendation = document.getElementById('admin-rec-text').value;
   const product = document.getElementById('admin-product-suggest').value;
   const status = document.getElementById('admin-rec-status').value;
-  
+
   if (!requestId) {
     showToast("No Request Selected", "Please click on a request from the list first.", "warning");
     return;
@@ -1186,7 +1214,7 @@ async function handleAdminSubmitRec(e) {
     const docRef = db.collection('farmerRequests').doc(requestId);
     const doc = await docRef.get();
     if (!doc.exists) throw new Error("Document not found.");
-    
+
     const reqData = doc.data();
 
     await docRef.update({
@@ -1214,7 +1242,7 @@ async function handleAdminSubmitRec(e) {
 // 10. REAL-TIME NOTIFICATIONS
 function setupNotificationsListener() {
   if (notificationsListener) notificationsListener(); // unsubscribe
-  
+
   notificationsListener = db.collection('notifications')
     .where('userId', '==', currentUser.uid)
     .onSnapshot((snapshot) => {
@@ -1310,7 +1338,7 @@ function showToast(title, desc, type = 'info', action = null) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  
+
   const actionHtml = action
     ? `<button class="toast-action-btn">${action.label}</button>`
     : '';
@@ -1384,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const docRef = doc(db, 'users', user.uid);
         let userDocSnap;
-        
+
         try {
           userDocSnap = await getDoc(docRef);
         } catch (readErr) {
@@ -1410,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             role: user.email && user.email.toLowerCase().trim() === 'ramesh@gmail.com' ? 'admin' : 'farmer',
             createdAt: serverTimestamp()
           };
-          
+
           try {
             await setDoc(docRef, defaultProfile);
             console.log("Automatically created default user profile in Firestore.");
@@ -1427,11 +1455,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         console.log("User role found or default assigned:", currentUserProfile.role);
-        
+
         // Apply Language
         setLanguage(currentUserProfile.preferredLanguage || currentLanguage);
         document.getElementById('signout-btn').style.display = 'block';
-        
+
         // Show proper dashboard based on role
         if (currentUserProfile.role.toLowerCase() === 'admin') {
           document.body.classList.add('owner-theme');
@@ -1471,12 +1499,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       currentUser = null;
       currentUserProfile = null;
-      
+
       // Cleanup real-time listeners
       if (farmerRequestsListener) farmerRequestsListener();
       if (notificationsListener) notificationsListener();
       if (adminRequestsListener) adminRequestsListener();
-      
+
       document.getElementById('signout-btn').style.display = 'none';
       document.getElementById('notification-btn').style.display = 'none';
       document.body.classList.remove('owner-theme');
@@ -1528,13 +1556,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner"></span> Registering...`;
-    
+
     isRegistering = true; // Block auth state change race condition
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
-      
+
       console.log("Signup Firebase UID:", user.uid);
 
       // Register profile details in Firestore users collection
@@ -1550,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preferredLanguage: lang,
         createdAt: serverTimestamp()
       };
-      
+
       try {
         const docRef = doc(db, 'users', user.uid);
         await setDoc(docRef, profile);
@@ -1560,10 +1588,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Throw it to be caught by outer block
         throw dbErr;
       }
-      
+
       currentUser = user;
       currentUserProfile = profile;
-      
+
       setLanguage(lang);
       document.getElementById('signout-btn').style.display = 'block';
       showToast("Registered", "Signup successful.", "success");
@@ -1636,14 +1664,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderImagePreviews();
     showPage('view-farmer-upload');
   };
-  
+
   document.getElementById('btn-dashboard-camera').onclick = () => {
     uploadedImages = [];
     initCameraMedia();
   };
-  
+
   document.getElementById('btn-dashboard-reports').onclick = () => showPage('view-farmer-reports');
-  
+
   document.getElementById('btn-dashboard-lang').onclick = () => {
     const sel = document.getElementById('lang-select');
     sel.focus();
