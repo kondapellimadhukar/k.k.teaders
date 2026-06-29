@@ -1071,7 +1071,7 @@ function setupFarmerRequestsListener() {
         card.className = 'report-row-card fade-in';
 
         const img = document.createElement('img');
-        img.src = r.images[0] || 'logo.svg';
+        img.src = (r.images && r.images.length > 0) ? r.images[0] : 'logo.svg';
         img.className = 'report-row-thumb';
         img.onclick = (e) => {
           e.stopPropagation();
@@ -2160,27 +2160,39 @@ document.addEventListener('DOMContentLoaded', () => {
   if (el_zoom_overlay) el_zoom_overlay.onclick = closeImageZoom;
 
   // Notification Modal Trigger Dropdown panel toggle
-  document.getElementById('notification-btn').onclick = (e) => {
-    e.stopPropagation();
-    const panel = document.getElementById('notification-panel');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-  };
+  const el_notif_btn = document.getElementById('notification-btn');
+  if (el_notif_btn) {
+    el_notif_btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const panel = document.getElementById('notification-panel');
+      if (panel) {
+        const isHidden = panel.style.display === 'none' || panel.style.display === '';
+        panel.style.display = isHidden ? 'block' : 'none';
+      }
+    });
+  }
 
-  document.getElementById('clear-notifications').onclick = async () => {
-    try {
-      const q = await db.collection('notifications').where('userId', '==', currentUser.uid).get();
-      const batch = db.batch();
-      q.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-    } catch (err) {
-      console.error("Clear notifications error:", err);
-    }
-  };
+  const el_clear_notifs = document.getElementById('clear-notifications');
+  if (el_clear_notifs) {
+    el_clear_notifs.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        if (!currentUser) return;
+        const q = await db.collection('notifications').where('userId', '==', currentUser.uid).get();
+        const batch = db.batch();
+        q.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      } catch (err) {
+        console.error("Clear notifications error:", err);
+      }
+    });
+  }
 
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('notification-panel');
-    if (panel && panel.style.display === 'block' && !panel.contains(e.target) && e.target.id !== 'notification-btn') {
+    const clickedBtn = e.target.closest('#notification-btn');
+    if (panel && panel.style.display === 'block' && !panel.contains(e.target) && !clickedBtn) {
       panel.style.display = 'none';
     }
   });
