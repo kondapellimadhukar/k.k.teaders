@@ -917,7 +917,8 @@ function renderAIResultPage(report) {
   document.getElementById('result-top-req-id').textContent = report.id ? `#${report.id.substring(0, 8).toUpperCase()}` : '#NEW';
   document.getElementById('result-top-crop').textContent = report.cropType === 'Other' && report.detectedCropType ? `Other (${report.detectedCropType})` : report.cropType;
   
-  const translatedSymptoms = report.symptoms.map(s => translations[currentLanguage] ? (translations[currentLanguage][`symp_${s}`] || s) : s).join(', ');
+  const symptomsArray = Array.isArray(report.symptoms) ? report.symptoms : [];
+  const translatedSymptoms = symptomsArray.map(s => translations[currentLanguage] ? (translations[currentLanguage][`symp_${s}`] || s) : s).join(', ');
   document.getElementById('result-top-symptoms').textContent = translatedSymptoms || 'None';
   document.getElementById('result-top-status').textContent = report.status || 'Analysis Ready';
 
