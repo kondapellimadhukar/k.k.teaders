@@ -1328,7 +1328,8 @@ function loadAdminRequestDetail(request) {
   const saveDraftBtn = document.getElementById('btn-admin-save-draft');
   
   saveDraftBtn.onclick = (e) => handleAdminSubmitRec(e, false);
-  document.getElementById('admin-recommendation-form').onsubmit = (e) => handleAdminSubmitRec(e, true);
+  const el_admin_recommendation_form = document.getElementById('admin-recommendation-form');
+  if (el_admin_recommendation_form) el_admin_recommendation_form.onsubmit = (e) => handleAdminSubmitRec(e, true);
 }
 
 async function handleAdminSubmitRec(e, isSendToFarmer = false) {
@@ -2012,7 +2013,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initCameraMedia();
   };
 
-  document.getElementById('btn-dashboard-reports').onclick = () => showPage('view-farmer-reports');
+  const el_btn_dashboard_reports = document.getElementById('btn-dashboard-reports');
+  if (el_btn_dashboard_reports) el_btn_dashboard_reports.onclick = () => showPage('view-farmer-reports');
 
   document.getElementById('btn-dashboard-lang').onclick = () => {
     const sel = document.getElementById('lang-select');
@@ -2022,15 +2024,25 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Navigation Back buttons
-  document.getElementById('upload-back-btn').onclick = () => showPage('view-farmer-dashboard');
-  document.getElementById('result-back-btn').onclick = () => showPage('view-farmer-dashboard');
-  document.getElementById('reports-back-btn').onclick = () => showPage('view-farmer-dashboard');
+  const uploadBackBtn = document.getElementById('upload-back-btn');
+  if (uploadBackBtn) uploadBackBtn.onclick = () => showPage('view-farmer-dashboard');
+  
+  const resultBackBtn = document.getElementById('result-back-btn');
+  if (resultBackBtn) resultBackBtn.onclick = () => showPage('view-farmer-dashboard');
+  
+  const reportsBackBtn = document.getElementById('reports-back-btn');
+  if (reportsBackBtn) reportsBackBtn.onclick = () => showPage('view-farmer-dashboard');
+  
   // "Send to Shop Owner" button on diagnosis result page (already submitted; confirm to farmer)
-  document.getElementById('btn-send-owner-rec').onclick = () => {
-    showToast("Already Submitted", "Your request and AI diagnosis report are already submitted to K.K TRADERS for review.", "success");
-  };
+  const btnSendOwnerRec = document.getElementById('btn-send-owner-rec');
+  if (btnSendOwnerRec) {
+    btnSendOwnerRec.onclick = () => {
+      showToast("Already Submitted", "Your request and AI diagnosis report are already submitted to K.K TRADERS for review.", "success");
+    };
+  }
 
-  document.getElementById('btn-result-view-reports').onclick = () => showPage('view-farmer-reports');
+  const btnResultViewReports = document.getElementById('btn-result-view-reports');
+  if (btnResultViewReports) btnResultViewReports.onclick = () => showPage('view-farmer-reports');
 
   // Admin Dashboard Tabs
   const tabRequests = document.getElementById('admin-tab-requests');
@@ -2126,20 +2138,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Submit forms hooks
-  document.getElementById('crop-upload-form').onsubmit = handleFarmerSubmit;
-  document.getElementById('admin-recommendation-form').onsubmit = handleAdminSubmitRec;
+  const el_crop_upload_form = document.getElementById('crop-upload-form');
+  if (el_crop_upload_form) el_crop_upload_form.onsubmit = handleFarmerSubmit;
+  const el_admin_recommendation_form = document.getElementById('admin-recommendation-form');
+  if (el_admin_recommendation_form) el_admin_recommendation_form.onsubmit = handleAdminSubmitRec;
 
   // Image Drag zone trigger input click + drag-and-drop support
   document.getElementById('image-drag-zone').onclick = () => {
     document.getElementById('file-uploader-input').click();
   };
-  document.getElementById('file-uploader-input').onchange = handleGalleryUploads;
+  const el_file_uploader_input = document.getElementById('file-uploader-input');
+  if (el_file_uploader_input) el_file_uploader_input.onchange = handleGalleryUploads;
   setupDragDropHandlers();
 
   // Media close and zoom bindings
-  document.getElementById('camera-close-btn').onclick = closeCameraStream;
-  document.getElementById('camera-shutter-btn').onclick = captureVideoFrame;
-  document.getElementById('zoom-overlay').onclick = closeImageZoom;
+  const el_camera_close_btn = document.getElementById('camera-close-btn');
+  if (el_camera_close_btn) el_camera_close_btn.onclick = closeCameraStream;
+  const el_camera_shutter_btn = document.getElementById('camera-shutter-btn');
+  if (el_camera_shutter_btn) el_camera_shutter_btn.onclick = captureVideoFrame;
+  const el_zoom_overlay = document.getElementById('zoom-overlay');
+  if (el_zoom_overlay) el_zoom_overlay.onclick = closeImageZoom;
 
   // Notification Modal Trigger Dropdown panel toggle
   document.getElementById('notification-btn').onclick = (e) => {
