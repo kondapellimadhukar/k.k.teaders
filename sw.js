@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agroassist-v5';
+const CACHE_NAME = 'agroassist-v6';
 const ASSETS = [
   './',
   './index.html',

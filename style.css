@@ -1992,4 +1992,33 @@ main {
   border-radius: 6px;
 }
 
+/* NEW REPORT UI CLASSES */
+.summary-box {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+}
+.summary-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.summary-value {
+  font-size: 1.05rem;
+  color: #0f172a;
+}
 
+@media (max-width: 900px) {
+  .report-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .top-summary-bar {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  #result-product-banner > div:nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+}

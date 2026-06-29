@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="logo-192.png">
   
   <!-- CSS Link -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -182,27 +182,12 @@
           <span class="weather-status-text" id="weather-location-name">--</span>
         </div>
         
-        <div id="weather-data-content" class="weather-body">
-          <div class="weather-item">
-            <div class="weather-item-label" data-i18n="temperature">Temperature</div>
-            <div class="weather-item-val" id="weather-temp">--°C</div>
-          </div>
-          <div class="weather-item">
-            <div class="weather-item-label" data-i18n="humidity">Humidity</div>
-            <div class="weather-item-val" id="weather-humidity">--%</div>
-          </div>
-          <div class="weather-item">
-            <div class="weather-item-label" data-i18n="rain_chance">Rain Chance</div>
-            <div class="weather-item-val" id="weather-rain">--%</div>
-          </div>
-          <div class="weather-item">
-            <div class="weather-item-label" data-i18n="condition">Condition</div>
-            <div class="weather-item-val" style="font-size: 0.95rem;" id="weather-condition" data-i18n="loading">Loading...</div>
-          </div>
+        <div id="weather-data-content" class="weather-body" style="display: none;">
+          <!-- Real weather data temporarily disabled -->
         </div>
         
-        <div id="weather-error-box" class="offline-banner" style="display: none;" data-i18n="weather_unavailable">
-          Weather data currently unavailable.
+        <div id="weather-error-box" class="offline-banner" style="display: block; text-align: center; color: var(--text-muted); background-color: var(--card-bg);" data-i18n="weather_unavailable">
+          Weather feature coming soon...
         </div>
 
         <div id="weather-alert-zone">
@@ -413,127 +398,190 @@
         </button>
       </div>
 
-      <div class="diagnosis-container">
+      <div class="diagnosis-container new-report-ui">
         
-        <div class="diag-analysis-header">
-          <!-- Request status success banner -->
-          <div class="analysis-success-badge">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <span data-i18n="request_submitted">Request submitted successfully</span>
+        <!-- TOP SUMMARY BAR -->
+        <div class="top-summary-bar" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+          <div class="summary-box">
+            <div class="summary-label">Request ID</div>
+            <div class="summary-value" id="result-top-req-id" style="font-weight: bold;">Loading...</div>
           </div>
-          
-          <h2 data-i18n="ai_analysis_ready">AI-Assisted Crop Analysis</h2>
-          <p data-i18n="ai_analysis_subtitle">Shop owner will review and confirm the recommendation.</p>
+          <div class="summary-box">
+            <div class="summary-label">Crop</div>
+            <div class="summary-value" id="result-top-crop" style="font-weight: bold;">Loading...</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Symptoms</div>
+            <div class="summary-value" id="result-top-symptoms" style="font-weight: bold; color: #b91c1c;">Loading...</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Status</div>
+            <div class="summary-value" id="result-top-status" style="font-weight: bold;">Loading...</div>
+          </div>
         </div>
 
-        <!-- Main Card layout exactly matching screenshot -->
-        <div class="analysis-card">
-          <!-- Card Header -->
-          <div class="analysis-card-header">
-            <div class="analysis-card-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
-                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
-                <path d="M12 6v6l4 2"></path>
-              </svg>
-              <span data-i18n="demo_ai_suggestion">DEMO AI SUGGESTION</span>
-            </div>
-            <div class="analysis-confidence-pill">
-              <span data-i18n="confidence">Demo Confidence</span>: <span id="result-confidence">75%</span>
+        <!-- 3 COLUMN GRID -->
+        <div class="report-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: start; margin-bottom: 24px;">
+          
+          <!-- COL 1: Uploaded Image -->
+          <div class="report-col" style="background: #f8fafc; border-radius: 12px; padding: 16px;">
+            <h3 style="font-size: 1rem; color: #475569; margin-bottom: 12px;">Uploaded Image</h3>
+            <div id="result-images-container" style="width: 100%; border-radius: 8px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; min-height: 200px;">
+              <!-- Dynamic image -->
             </div>
           </div>
 
-          <!-- Card Body -->
-          <div class="analysis-card-body">
-            <!-- Uploaded images (if any) -->
-            <div style="display: flex; gap: 8px; margin-bottom: 8px;" id="result-images-container">
-              <!-- Dynamic uploaded photos -->
+          <!-- COL 2: AI Diagnosis -->
+          <div class="report-col" style="background: #f0fdf4; border-radius: 12px; padding: 16px; border: 1px solid #bbf7d0;">
+            <h3 style="font-size: 1rem; color: #166534; margin-bottom: 12px;">AI Diagnosis</h3>
+            
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 0.85rem; color: #15803d;">Disease Detected</div>
+              <div id="result-disease-prediction" style="font-weight: 700; font-size: 1.1rem; color: #14532d;">Loading...</div>
+            </div>
+            
+            <div style="display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.9rem;">
+              <div><span style="color: #15803d;">Confidence:</span> <strong id="result-confidence" style="color: #14532d;">-</strong></div>
+              <div><span style="color: #15803d;">Severity:</span> <strong id="result-severity" style="color: #14532d;">-</strong></div>
             </div>
 
-            <!-- Two-column Crop / Symptoms info -->
-            <div class="analysis-grid-2">
-              <div class="analysis-info-box">
-                <div class="analysis-info-label">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                    <path d="M2 17l10 5 10-5"></path>
-                    <path d="M2 12l10 5 10-5"></path>
-                  </svg>
-                  <span data-i18n="crop_type">CROP</span>
-                </div>
-                <div class="analysis-info-val" id="result-crop-name">Tomato</div>
+            <div style="margin-bottom: 16px;">
+              <div style="font-size: 0.85rem; color: #15803d;">Possible Cause</div>
+              <div id="result-possible-causes" style="font-size: 0.9rem; color: #14532d; font-weight: 500;">Loading...</div>
+            </div>
+
+            <div style="background: #ffffff; border: 1px dashed #22c55e; border-radius: 8px; padding: 12px;">
+              <div style="font-size: 0.85rem; color: #16a34a; font-weight: bold; margin-bottom: 8px;">AI Suggested Fertilizer / Treatment</div>
+              <div id="result-fertilizer-recommendation" style="font-size: 0.9rem; color: #14532d; font-weight: 600; margin-bottom: 4px;">Loading...</div>
+              <ul style="padding-left: 16px; margin: 0; font-size: 0.85rem; color: #15803d; line-height: 1.4;" id="result-ai-treatment-list">
+                <!-- dynamic list -->
+              </ul>
+            </div>
+          </div>
+
+          <!-- COL 3: Owner Recommendation -->
+          <div class="report-col" id="result-owner-col" style="background: #fffdf5; border-radius: 12px; padding: 16px; border: 1px solid #fef0cd; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 1rem; color: #ca8a04; margin: 0;">Owner Recommendation</h3>
+              <span style="background: #fef08a; color: #854d0e; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Recommended</span>
+            </div>
+
+            <div style="font-size: 0.85rem; color: #854d0e;">Recommended Brand by K.K TRADERS</div>
+            <div id="result-owner-brand" style="font-weight: 700; font-size: 1.1rem; color: #713f12; margin-bottom: 12px;">-</div>
+
+            <div style="font-size: 0.85rem; color: #854d0e;">Recommended Product</div>
+            <div id="result-owner-product" style="font-weight: 700; font-size: 1.1rem; color: #713f12; margin-bottom: 16px;">-</div>
+
+            <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 16px;">
+              <div style="flex: 1;">
+                <div style="font-size: 0.85rem; color: #854d0e;">Dosage</div>
+                <div id="result-owner-dosage" style="font-size: 0.95rem; color: #713f12; font-weight: 500; margin-bottom: 8px;">-</div>
+
+                <div style="font-size: 0.85rem; color: #854d0e;">Application Method</div>
+                <div id="result-owner-method" style="font-size: 0.95rem; color: #713f12; font-weight: 500;">-</div>
               </div>
-
-              <div class="analysis-info-box">
-                <div class="analysis-info-label">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                  </svg>
-                  <span data-i18n="reported_symptoms">REPORTED SYMPTOMS</span>
-                </div>
-                <div class="analysis-info-val" id="result-symptoms-list">Yellow leaves</div>
-              </div>
-            </div>
-
-            <!-- Disease Prediction -->
-            <div class="analysis-issue-box">
-              <div class="analysis-info-label"><span data-i18n="disease_prediction">DISEASE PREDICTION</span></div>
-              <div class="analysis-issue-val" id="result-disease-prediction">Nitrogen deficiency possible</div>
-            </div>
-
-            <!-- Possible Causes -->
-            <div class="analysis-issue-box" style="margin-top: 16px;">
-              <div class="analysis-info-label"><span data-i18n="possible_causes">POSSIBLE CAUSES</span></div>
-              <div class="analysis-issue-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4;" id="result-possible-causes">--</div>
-            </div>
-
-            <!-- Fertilizer Recommendation -->
-            <div class="analysis-issue-box" style="margin-top: 16px; border-left-color: var(--success); background-color: #f0fdf4;">
-              <div class="analysis-info-label green-label"><span data-i18n="fertilizer_recommendation">FERTILIZER RECOMMENDATION</span></div>
-              <div class="analysis-issue-val" style="font-size: 1rem; font-weight: 600; color: var(--primary-dark);" id="result-fertilizer-recommendation">--</div>
-            </div>
-
-            <!-- Two-column Treatments -->
-            <div class="analysis-grid-2" style="margin-top: 16px;">
-              <div class="analysis-info-box highlight-category" style="border-left-color: var(--accent); background-color: #f4fbf7;">
-                <div class="analysis-info-label green-label"><span data-i18n="organic_treatment">ORGANIC TREATMENT</span></div>
-                <div class="analysis-info-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4;" id="result-organic-treatment">--</div>
-              </div>
-
-              <div class="analysis-info-box highlight-note" style="border-left-color: var(--danger); background-color: #fef2f2;">
-                <div class="analysis-info-label red-label"><span data-i18n="chemical_treatment">CHEMICAL TREATMENT</span></div>
-                <div class="analysis-info-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4;" id="result-chemical-treatment">--</div>
+              <div style="flex-shrink: 0; width: 80px; height: 100px; border: 1px solid #fde047; border-radius: 8px; background: white; padding: 4px; display: flex; align-items: center; justify-content: center;">
+                <img id="result-owner-product-small-img" src="" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;" />
               </div>
             </div>
 
-            <!-- Prevention Tips -->
-            <div class="analysis-issue-box" style="margin-top: 16px; border-left-color: var(--info); background-color: #eff6ff; margin-bottom: 20px;">
-              <div class="analysis-info-label blue-label"><span data-i18n="prevention_tips">PREVENTION TIPS</span></div>
-              <div class="analysis-issue-val" style="font-size: 0.95rem; font-weight: 500; line-height: 1.4; color: #1e3a8a;" id="result-prevention-tips">--</div>
+            <div style="background: #fefce8; padding: 12px; border-radius: 8px; font-size: 0.85rem; color: #854d0e; border: 1px dashed #facc15;">
+              <strong>Owner Advice:</strong> <span id="result-owner-advice">-</span>
             </div>
+          </div>
+        </div>
 
-            <!-- Warning Disclaimer inside the card -->
-            <div class="disclaimer-box" style="margin: 0; background-color: #fffdf5; border-color: #fef0cd;">
+        <!-- RECOMMENDED PRODUCT FULL BANNER (Shows only if recommended) -->
+        <div id="result-product-banner" style="display: none; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 24px;">
+          <div style="background: #f8fafc; padding: 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 1.1rem;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
               </svg>
-              <span data-i18n="disclaimer_text">AI diagnosis and fertilizer suggestions are preliminary guidance only. Please confirm with K.K TRADERS or an agriculture expert before applying fertilizer or treatment.</span>
+              Recommended Product for You
+            </div>
+            <span style="background: #dcfce7; color: #166534; font-size: 0.8rem; padding: 4px 12px; border-radius: 16px; font-weight: bold;">Best Match</span>
+          </div>
+          
+          <div style="padding: 24px; display: grid; grid-template-columns: 250px 1fr 300px; gap: 24px; align-items: start;">
+            <!-- Left: Large Image -->
+            <div style="width: 100%; height: 300px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 16px;">
+              <img id="result-product-large-img" src="" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;" />
+              <div id="result-product-no-img" style="color: #94a3b8; font-size: 0.9rem;">No Image Available</div>
             </div>
 
-            <!-- Bottom action buttons inside card -->
-            <div class="analysis-action-buttons">
-              <button id="btn-send-owner-rec" class="btn-send-owner">
-                <span data-i18n="send_to_shop_owner">Send to Shop Owner</span> &rarr;
-              </button>
-              <button id="btn-result-view-reports" class="btn-view-status">
-                View my request status
-              </button>
+            <!-- Middle: Specs -->
+            <div>
+              <h2 id="result-product-name" style="margin: 0 0 8px 0; color: #0f172a; font-size: 1.4rem;">-</h2>
+              <div id="result-product-type" style="color: #64748b; font-size: 0.95rem; margin-bottom: 20px;">-</div>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; width: 120px;">NPK</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-weight: 500;" id="result-product-npk">-</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b;">Content</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-weight: 500;" id="result-product-content">-</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b;">Use For</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-weight: 500;" id="result-product-usefor">-</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #64748b; vertical-align: top;">Benefits</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-weight: 500; line-height: 1.5;" id="result-product-benefits">-</td>
+                </tr>
+              </table>
             </div>
 
+            <!-- Right: Price & Order Action -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
+              <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 4px;">Price (Approx.)</div>
+              <div id="result-product-price" style="font-size: 1.5rem; font-weight: bold; color: #0f172a; margin-bottom: 16px;">-</div>
+              
+              <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 4px;">Availability</div>
+              <div id="result-product-availability" style="font-size: 1rem; font-weight: bold; color: #16a34a; margin-bottom: 24px; display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 50%;"></span> In Stock
+              </div>
+              
+              <div style="background: #e0f2fe; padding: 12px; border-radius: 8px; font-size: 0.85rem; color: #0369a1;">
+                <strong>Owner Advice:</strong> <span id="result-product-owner-advice">-</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Bottom Ordering Banner -->
+          <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <h3 style="margin: 0 0 4px 0; color: #0f172a; font-size: 1.1rem;">Want to Order This Product?</h3>
+              <div style="color: #64748b; font-size: 0.9rem;">Place an order request and K.K TRADERS will contact you.</div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+              <button id="btn-place-order" class="btn-primary" style="display: flex; align-items: center; gap: 8px; background: #16a34a; border-color: #16a34a;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                Place Order Request
+              </button>
+              
+              <button id="btn-call-shop" class="btn-secondary" style="display: flex; align-items: center; gap: 8px; color: #0284c7; border-color: #e0f2fe; background: #f0f9ff;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                Call K.K TRADERS
+              </button>
+              
+              <button id="btn-whatsapp-shop" class="btn-secondary" style="display: flex; align-items: center; gap: 8px; color: #16a34a; border-color: #dcfce7; background: #f0fdf4;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                </svg>
+                WhatsApp
+              </button>
+            </div>
           </div>
         </div>
 
@@ -563,23 +611,31 @@
         <p>Review diagnosis requests, check crop leaf conditions, and send custom fertilizer recommendations to farmers.</p>
       </div>
 
-      <!-- Stats Banner -->
-      <div class="admin-stats-grid">
-        <div class="stat-card">
-          <div class="stat-number" id="admin-stat-total">0</div>
-          <div class="stat-label">Total Requests</div>
-        </div>
-        <div class="stat-card pending">
-          <div class="stat-number" id="admin-stat-pending">0</div>
-          <div class="stat-label">Pending Review</div>
-        </div>
-        <div class="stat-card resolved">
-          <div class="stat-number" id="admin-stat-resolved">0</div>
-          <div class="stat-label">Resolved</div>
-        </div>
+      <!-- Admin Tabs -->
+      <div style="display: flex; gap: 16px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+        <button id="admin-tab-requests" class="btn-text active-tab" style="font-weight: bold; color: var(--primary-dark); font-size: 1.1rem; border-bottom: 3px solid var(--primary-dark); padding-bottom: 4px;">Farmer Requests</button>
+        <button id="admin-tab-orders" class="btn-text" style="font-weight: bold; color: var(--text-muted); font-size: 1.1rem;">Farmer Orders</button>
       </div>
 
-      <!-- Split Layout for Admin Panel -->
+      <!-- TAB 1: REQUESTS -->
+      <div id="admin-view-requests">
+        <!-- Stats Banner -->
+        <div class="admin-stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="admin-stat-total">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-card pending">
+            <div class="stat-number" id="admin-stat-pending">0</div>
+            <div class="stat-label">Pending Review</div>
+          </div>
+          <div class="stat-card resolved">
+            <div class="stat-number" id="admin-stat-resolved">0</div>
+            <div class="stat-label">Resolved</div>
+          </div>
+        </div>
+
+        <!-- Split Layout for Admin Panel -->
       <div class="admin-split-layout">
         <!-- Left Panel: Requests List -->
         <div class="admin-list-panel">
@@ -611,31 +667,169 @@
           </div>
 
           <!-- Advisor Form -->
-          <form id="admin-recommendation-form" class="admin-rec-form">
+          <form id="admin-recommendation-form" class="admin-rec-form" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 24px;">
+            <h4 style="margin-bottom: 16px; color: var(--primary-dark); font-weight: 700; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Owner Recommendation</h4>
             <input type="hidden" id="admin-active-request-id">
-            
-            <div class="form-group" style="margin-top: 16px;">
-              <label class="form-label" for="admin-rec-text">Expert Advice & Final Recommendation *</label>
-              <textarea id="admin-rec-text" class="form-control" rows="3" placeholder="Explain fertilizer dose, timing, and precautions..." required></textarea>
-            </div>
 
             <div class="form-group">
-              <label class="form-label" for="admin-product-suggest">Recommended Product / Brand (K.K TRADERS Stock)</label>
-              <input type="text" id="admin-product-suggest" class="form-control" placeholder="e.g., Coromandel Urea / Sagarika Liquid">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="admin-rec-status">Action Status</label>
-              <select id="admin-rec-status" class="form-control" required>
-                <option value="Reviewed">Reviewed (Provide Feedback)</option>
-                <option value="Resolved">Resolved (Advisory Closed)</option>
+              <label class="form-label" for="admin-product-suggest">Select Brand (You recommend)</label>
+              <select id="admin-product-suggest" class="form-control">
+                <option value="" disabled selected>Select recommended brand</option>
+                <option value="NACL Industries Ltd">NACL Industries Ltd</option>
+                <option value="Adama India Pvt. Ltd">Adama India Pvt. Ltd</option>
+                <option value="Crystal Crop Protection Ltd">Crystal Crop Protection Ltd</option>
+                <option value="Insecticides (India) Ltd">Insecticides (India) Ltd</option>
+                <option value="Dhanuka Agritech Ltd">Dhanuka Agritech Ltd</option>
+                <option value="Syngenta India Ltd">Syngenta India Ltd</option>
+                <option value="Gharda Chemicals Ltd">Gharda Chemicals Ltd</option>
+                <option value="Dow AgroSciences India Pvt. Ltd">Dow AgroSciences India Pvt. Ltd</option>
+                <option value="Corteva Agriscience India Pvt. Ltd">Corteva Agriscience India Pvt. Ltd</option>
+                <option value="BASF India Ltd">BASF India Ltd</option>
+                <option value="UPL Ltd">UPL Ltd</option>
+                <option value="Bayer CropScience Ltd">Bayer CropScience Ltd</option>
+                <option value="FMC India Pvt. Ltd">FMC India Pvt. Ltd</option>
+                <option value="T. Stanes & Company Ltd">T. Stanes & Company Ltd</option>
+                <option value="IFFCO">IFFCO</option>
               </select>
             </div>
 
-            <button type="submit" class="btn btn-primary" id="btn-admin-submit-rec">Submit Expert Advice</button>
+            <!-- Product Image Upload -->
+            <div class="form-group">
+              <label class="form-label">Product Image</label>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <div id="admin-image-preview-box" style="width: 80px; height: 100px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; cursor: pointer; overflow: hidden; position: relative;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" style="margin-bottom: 4px;">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span style="font-size: 0.7rem; color: #94a3b8; text-align: center;">Upload Image</span>
+                  <img id="admin-image-preview-img" style="display: none; position: absolute; width: 100%; height: 100%; object-fit: contain; background: #fff;" src="" />
+                </div>
+                <input type="file" id="admin-product-image-input" accept="image/*" style="display: none;">
+                <input type="hidden" id="admin-product-image-base64">
+              </div>
+            </div>
+
+            <!-- Product Specs -->
+            <div style="display: flex; gap: 12px;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="admin-product-price">Price (Approx)</label>
+                <input type="text" id="admin-product-price" class="form-control" placeholder="e.g. ₹ 850 / 1 kg">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="admin-product-availability">Availability</label>
+                <select id="admin-product-availability" class="form-control">
+                  <option value="In Stock">In Stock</option>
+                  <option value="Out of Stock">Out of Stock</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="admin-product-npk">NPK</label>
+                <input type="text" id="admin-product-npk" class="form-control" placeholder="e.g. 13:0:45">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="admin-product-type">Type</label>
+                <input type="text" id="admin-product-type" class="form-control" placeholder="e.g. 100% Water Soluble">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-product-content">Content</label>
+              <input type="text" id="admin-product-content" class="form-control" placeholder="e.g. Potassium Nitrate">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-product-use-for">Use For</label>
+              <input type="text" id="admin-product-use-for" class="form-control" placeholder="e.g. Disease management, Better fruit quality">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-product-benefits">Benefits</label>
+              <textarea id="admin-product-benefits" class="form-control" rows="2" placeholder="e.g. Improves disease resistance"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-dosage">Dosage / Quantity</label>
+              <input type="text" id="admin-dosage" class="form-control" placeholder="e.g. 1-2 gram per litre of water">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-app-method">Application Method</label>
+              <input type="text" id="admin-app-method" class="form-control" placeholder="e.g. Foliar spray">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="admin-rec-text">Owner Advice (Optional)</label>
+              <textarea id="admin-rec-text" class="form-control" rows="2" placeholder="e.g. Use in the evening time for best results..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 16px;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="admin-followup-date">Follow-up Date</label>
+                <input type="date" id="admin-followup-date" class="form-control">
+              </div>
+
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="admin-rec-status">Action Status</label>
+                <select id="admin-rec-status" class="form-control" required>
+                  <option value="Pending">Pending</option>
+                  <option value="Under Review">Under Review</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Product Recommended">Product Recommended</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
+              <button type="button" class="btn btn-secondary" id="btn-admin-save-draft" style="flex: 1;">Save Recommendation</button>
+              <button type="submit" class="btn btn-primary" id="btn-admin-submit-rec" style="flex: 1;">Send Recommendation to Farmer</button>
+            </div>
           </form>
         </div>
-      </div>
+      </div> <!-- End TAB 1: REQUESTS -->
+
+      <!-- TAB 2: ORDERS -->
+      <div id="admin-view-orders" style="display: none;">
+        <div class="admin-list-panel" style="max-width: 100%;">
+          <div class="panel-header" style="justify-content: space-between; align-items: center;">
+            <h3>Farmer Order Requests</h3>
+            <div class="filter-group">
+              <select id="admin-order-status-filter" class="form-control" style="padding: 4px 8px; font-size: 0.85rem; width: auto; margin-bottom: 0;">
+                <option value="all">All Orders</option>
+                <option value="Order Requested">Requested</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Ready for Pickup">Ready for Pickup</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div style="overflow-x: auto; margin-top: 16px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+              <thead>
+                <tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0;">
+                  <th style="padding: 12px; font-weight: 600;">Farmer</th>
+                  <th style="padding: 12px; font-weight: 600;">Mobile</th>
+                  <th style="padding: 12px; font-weight: 600;">Product Requested</th>
+                  <th style="padding: 12px; font-weight: 600;">Quantity</th>
+                  <th style="padding: 12px; font-weight: 600;">Village</th>
+                  <th style="padding: 12px; font-weight: 600;">Status</th>
+                  <th style="padding: 12px; font-weight: 600; text-align: center;">Update</th>
+                </tr>
+              </thead>
+              <tbody id="admin-orders-list">
+                <!-- Orders populate here -->
+                <tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Loading orders...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div> <!-- End TAB 2: ORDERS -->
+
     </section>
 
   <!-- 11. CAMERA CAPTURE OVERLAY -->
@@ -667,20 +861,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="src/firebase.js"></script>
 
-  <!-- Google Generative AI SDK -->
-  <script type="importmap">
-    {
-      "imports": {
-        "@google/generative-ai": "https://esm.run/@google/generative-ai"
-      }
-    }
-  </script>
-  <script type="module">
-    import { GoogleGenerativeAI } from "@google/generative-ai";
-    window.GoogleGenerativeAI = GoogleGenerativeAI;
-  </script>
 
   <!-- Application script file -->
-  <script src="app.js"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

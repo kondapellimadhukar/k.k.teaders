@@ -1,7 +1,5 @@
 // AgroAssist Core Application Logic (Firebase Connected PWA)
 
-const GEMINI_API_KEY = "AQ.Ab8RN6LDJ10U-MsxWbZqFgaZOtVB3DLQr4QFTvuEqXUhDMNUxA"; // Update with actual API key
-
 // 1. LOCALIZATION DICTIONARY
 const translations = {
   en: {
@@ -798,66 +796,28 @@ async function handleFarmerSubmit(e) {
 
   try {
     let diagnosis = null;
-    console.log("AI diagnosis started");
-
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      throw new Error("Gemini API key not configured");
-    }
+    console.log("AI diagnosis started via backend API");
 
     try {
-      if (!window.GoogleGenerativeAI) {
-        throw new Error("Google Generative AI SDK not loaded yet. Please try again.");
+      const response = await fetch('/api/diagnose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cropType: cropType,
+          symptoms: symptoms,
+          description: description,
+          images: uploadedImages
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
       }
 
-      const genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      const base64Data = uploadedImages[0].split(',')[1];
-      const mimeType = uploadedImages[0].match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
-
-      const promptText = `You are an expert crop pathologist and agronomist. 
-Analyze the provided crop leaf image, along with the following farmer-reported details:
-- Crop Type: ${cropType}
-- Symptoms Selected: ${symptoms.join(', ')}
-- Farmer Description: ${description || 'No additional description provided.'}
-
-Provide an AI-assisted preliminary diagnosis, possible causes, prevention tips, and fertilizer & treatment recommendations.
-You MUST return ONLY a valid, raw JSON object matching this JSON schema exactly (do NOT wrap it in markdown blocks like \`\`\`json, return only the plain JSON string):
-{
-  "diseasePrediction": "Name of the crop disease or leaf problem diagnosed",
-  "possibleCauses": "Brief description of the possible causes for this crop problem",
-  "fertilizerRecommendation": "Fertilizer recommendation details (e.g. type, concentration, dosage, timing)",
-  "organicTreatment": "Details of suitable organic treatment or natural remedies",
-  "chemicalTreatment": "Details of suitable chemical treatment (if needed, otherwise N/A)",
-  "preventionTips": "Tips to prevent this issue from recurring in the future",
-  "confidence": "Estimated confidence percentage (e.g. 85%)"
-}`;
-
-      const imagePart = {
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType
-        }
-      };
-
-      const result = await model.generateContent([promptText, imagePart]);
-      const response = await result.response;
-      let text = response.text();
-
-      let cleanJsonStr = text.trim();
-      if (cleanJsonStr.startsWith('```json')) {
-        cleanJsonStr = cleanJsonStr.replace(/^```json/, '').replace(/```$/, '').trim();
-      } else if (cleanJsonStr.startsWith('```')) {
-        cleanJsonStr = cleanJsonStr.replace(/^```/, '').replace(/```$/, '').trim();
-      }
-
-      diagnosis = JSON.parse(cleanJsonStr);
+      diagnosis = await response.json();
       console.log("AI diagnosis completed");
     } catch (apiErr) {
-      console.error("Gemini API error:", apiErr);
-      if (apiErr.message === "Gemini API key not configured" || (apiErr.message && apiErr.message.includes("API_KEY_INVALID"))) {
-        throw new Error("Gemini API key not configured");
-      }
+      console.error("Backend API error:", apiErr);
       console.warn("Using local rule-based fallback...");
       diagnosis = calculateAIDiagnosis(cropType, symptoms);
     }
@@ -875,24 +835,32 @@ You MUST return ONLY a valid, raw JSON object matching this JSON schema exactly 
       farmerMobile: currentUserProfile ? (currentUserProfile.mobile || '') : '',
       village: location || '',
       cropType: cropType || '',
+      selectedCropType: (diagnosis && diagnosis.selectedCropType) || cropType || 'Other',
+      detectedCropType: (diagnosis && diagnosis.detectedCropType) || 'Unknown Crop – Please confirm with K.K TRADERS',
       symptoms: Array.isArray(symptoms) ? symptoms : [],
       description: description || '',
+      images: uploadedImages || [],
 
-      // New structured Gemini fields with strict fallbacks
-      diseasePrediction: (diagnosis && diagnosis.diseasePrediction) || fbPrediction,
-      possibleCauses: (diagnosis && diagnosis.possibleCauses) || fbCause,
-      fertilizerRecommendation: (diagnosis && diagnosis.fertilizerRecommendation) || fbFertilizer,
+      // New highly detailed Gemini fields with strict fallbacks
+      diseaseName: (diagnosis && (diagnosis.diseasePrediction || diagnosis.diseaseName)) || fbPrediction,
+      confidence: (diagnosis && diagnosis.confidence) || "75%",
+      severity: (diagnosis && diagnosis.severity) || "Medium",
+      reasoning: (diagnosis && Array.isArray(diagnosis.reasoning) && diagnosis.reasoning.length > 0) ? diagnosis.reasoning : [fbCause],
+      possibleCause: (diagnosis && (diagnosis.possibleCauses || diagnosis.possibleCause)) || fbCause,
+      recommendedFertilizerType: (diagnosis && diagnosis.recommendedFertilizerType) || fbFertilizer,
       organicTreatment: (diagnosis && diagnosis.organicTreatment) || fbTreatment,
       chemicalTreatment: (diagnosis && diagnosis.chemicalTreatment) || fbTreatment,
+      immediateAction: (diagnosis && diagnosis.immediateAction) || "Consult agricultural expert immediately.",
       preventionTips: (diagnosis && diagnosis.preventionTips) || fbPrecautions,
-      confidence: (diagnosis && diagnosis.confidence) || "70%",
+      estimatedRecoveryTime: (diagnosis && diagnosis.estimatedRecoveryTime) || "1-2 weeks",
+      recommendedExpert: "K.K Traders",
 
-      // Legacy fallback fields
-      aiProblem: (diagnosis && (diagnosis.diseasePrediction || diagnosis.problem)) || fbPrediction,
-      aiCategory: (diagnosis && (diagnosis.fertilizerRecommendation || diagnosis.category)) || 'Nutrients',
+      // Legacy fallback fields for backward compatibility
+      aiProblem: (diagnosis && (diagnosis.diseaseName || diagnosis.diseasePrediction || diagnosis.problem)) || fbPrediction,
+      aiCategory: (diagnosis && (diagnosis.recommendedFertilizer || diagnosis.fertilizerRecommendation || diagnosis.category)) || 'Nutrients',
       aiRecommended: (diagnosis && (diagnosis.chemicalTreatment || diagnosis.recommended)) || fbTreatment,
       aiUsageNote: (diagnosis && (diagnosis.organicTreatment || diagnosis.usageNote)) || fbTreatment,
-      aiConfidence: (diagnosis && diagnosis.confidence) || '70%',
+      aiConfidence: (diagnosis && diagnosis.confidence) || '75%',
 
       status: 'AI Analysis Ready',
       submittedDate: new Date().toISOString().split('T')[0],
@@ -937,55 +905,135 @@ You MUST return ONLY a valid, raw JSON object matching this JSON schema exactly 
 
 
 function renderAIResultPage(report) {
-  document.getElementById('result-crop-name').textContent = report.cropType;
+  // Helper to format string into bullet points if it's not already
+  const formatBulletPoints = (text) => {
+    if (!text) return '';
+    if (Array.isArray(text)) return text.map(item => `<li>${item.replace(/^[•\-\*]\s*/, '')}</li>`).join('');
+    const points = text.split('\n').filter(p => p.trim() !== '');
+    return points.map(item => `<li>${item.replace(/^[•\-\*]\s*/, '')}</li>`).join('');
+  };
 
-  const translatedSymptoms = report.symptoms.map(s => translations[currentLanguage][`symp_${s}`] || s).join(', ');
-  document.getElementById('result-symptoms-list').textContent = translatedSymptoms;
+  // Top Summary Bar
+  document.getElementById('result-top-req-id').textContent = report.id ? `#${report.id.substring(0, 8).toUpperCase()}` : '#NEW';
+  document.getElementById('result-top-crop').textContent = report.cropType === 'Other' && report.detectedCropType ? `Other (${report.detectedCropType})` : report.cropType;
+  
+  const translatedSymptoms = report.symptoms.map(s => translations[currentLanguage] ? (translations[currentLanguage][`symp_${s}`] || s) : s).join(', ');
+  document.getElementById('result-top-symptoms').textContent = translatedSymptoms || 'None';
+  document.getElementById('result-top-status').textContent = report.status || 'Analysis Ready';
 
+  // Uploaded Image (Left Column)
   const imgContainer = document.getElementById('result-images-container');
   imgContainer.innerHTML = '';
-  report.images.forEach(imgUrl => {
+  if (report.images && report.images.length > 0) {
+    const imgUrl = report.images[0];
     const img = document.createElement('img');
     img.src = imgUrl;
-    img.style.width = '100px';
-    img.style.height = '100px';
-    img.style.objectFit = 'cover';
-    img.style.borderRadius = '8px';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
     img.style.cursor = 'zoom-in';
     img.onclick = () => openImageZoom(imgUrl);
     imgContainer.appendChild(img);
-  });
-
-  const cardTitle = document.querySelector('.analysis-card-title span');
-  const confidencePill = document.getElementById('result-confidence');
-
-  const diseasePrediction = document.getElementById('result-disease-prediction');
-  const possibleCauses = document.getElementById('result-possible-causes');
-  const fertilizerRecommendation = document.getElementById('result-fertilizer-recommendation');
-  const organicTreatment = document.getElementById('result-organic-treatment');
-  const chemicalTreatment = document.getElementById('result-chemical-treatment');
-  const preventionTips = document.getElementById('result-prevention-tips');
-
-  if (report.status === 'Reviewed' || report.status === 'Resolved') {
-    cardTitle.textContent = "K.K TRADERS RECOMMENDED";
-    confidencePill.textContent = "Verified Advisory";
-
-    if (diseasePrediction) diseasePrediction.textContent = report.aiProblem || report.diseasePrediction || 'Advisory Closed';
-    if (possibleCauses) possibleCauses.textContent = report.possibleCauses || 'Reviewed by Shop Owner';
-    if (fertilizerRecommendation) fertilizerRecommendation.textContent = report.adminProductSuggestion || report.aiRecommended || 'N/A';
-    if (organicTreatment) organicTreatment.textContent = 'Expert advice provided by shop owner.';
-    if (chemicalTreatment) chemicalTreatment.textContent = report.adminRecommendation || 'No chemical treatment specified.';
-    if (preventionTips) preventionTips.textContent = report.preventionTips || 'Review final recommendations closely.';
   } else {
-    cardTitle.textContent = "DEMO AI SUGGESTION";
-    confidencePill.textContent = report.aiConfidence || report.confidence || '75%';
+    imgContainer.innerHTML = '<span style="color: #64748b;">No Image Uploaded</span>';
+  }
 
-    if (diseasePrediction) diseasePrediction.textContent = report.diseasePrediction || report.aiProblem || 'N/A';
-    if (possibleCauses) possibleCauses.textContent = report.possibleCauses || 'N/A';
-    if (fertilizerRecommendation) fertilizerRecommendation.textContent = report.fertilizerRecommendation || report.aiCategory || 'N/A';
-    if (organicTreatment) organicTreatment.textContent = report.organicTreatment || report.aiUsageNote || 'N/A';
-    if (chemicalTreatment) chemicalTreatment.textContent = report.chemicalTreatment || report.aiRecommended || 'N/A';
-    if (preventionTips) preventionTips.textContent = report.preventionTips || 'N/A';
+  // AI Diagnosis (Middle Column)
+  document.getElementById('result-disease-prediction').textContent = report.diseaseName || report.diseasePrediction || report.aiProblem || 'No disease detected';
+  document.getElementById('result-confidence').textContent = report.confidence || report.aiConfidence || 'N/A';
+  
+  const severityEl = document.getElementById('result-severity');
+  severityEl.textContent = report.severity || 'Low';
+  severityEl.style.color = report.severity === 'High' ? '#b91c1c' : (report.severity === 'Medium' ? '#d97706' : '#15803d');
+
+  const possibleCauses = report.reasoning || report.possibleCause || report.possibleCauses || 'Based on visual analysis.';
+  document.getElementById('result-possible-causes').textContent = Array.isArray(possibleCauses) ? possibleCauses.join(' ') : possibleCauses;
+
+  document.getElementById('result-fertilizer-recommendation').textContent = report.recommendedFertilizerType || report.recommendedFertilizer || report.fertilizerRecommendation || report.aiCategory || 'General Nutrients';
+
+  // Build AI treatment list
+  let treatments = [];
+  if (report.organicTreatment) treatments.push(`Organic: ${report.organicTreatment}`);
+  if (report.chemicalTreatment) treatments.push(`Chemical: ${report.chemicalTreatment}`);
+  if (report.immediateAction) treatments.push(`Action: ${Array.isArray(report.immediateAction) ? report.immediateAction[0] : report.immediateAction}`);
+  
+  const treatmentList = document.getElementById('result-ai-treatment-list');
+  if (treatments.length > 0) {
+    treatmentList.innerHTML = formatBulletPoints(treatments);
+  } else {
+    treatmentList.innerHTML = '<li>No specific treatments suggested.</li>';
+  }
+
+  // Owner Recommendation & Bottom Banner
+  const ownerCol = document.getElementById('result-owner-col');
+  const productBanner = document.getElementById('result-product-banner');
+  const hasRecommendation = report.status === 'Completed' || report.status === 'Product Recommended' || report.adminProductSuggestion || report.adminRecommendation;
+
+  if (hasRecommendation) {
+    ownerCol.style.display = 'block';
+    productBanner.style.display = 'block';
+
+    const brand = report.adminSelectedBrand || 'K.K TRADERS Choice';
+    const finalProduct = report.finalProductName || report.adminProductSuggestion || 'Custom Blend';
+    
+    // Right Column Data
+    document.getElementById('result-owner-brand').textContent = brand;
+    document.getElementById('result-owner-product').textContent = finalProduct;
+    document.getElementById('result-owner-dosage').textContent = report.adminDosage || 'See instructions';
+    document.getElementById('result-owner-method').textContent = report.adminAppMethod || 'See instructions';
+    document.getElementById('result-owner-advice').textContent = report.adminRecommendation || 'No additional advice provided.';
+
+    // Bottom Banner Data
+    document.getElementById('result-product-name').textContent = finalProduct;
+    document.getElementById('result-product-type').textContent = report.adminProductType || `${brand} Product`;
+    document.getElementById('result-product-npk').textContent = report.adminProductNpk || '-';
+    document.getElementById('result-product-content').textContent = report.adminProductContent || '-';
+    document.getElementById('result-product-usefor').textContent = report.adminProductUseFor || '-';
+    document.getElementById('result-product-benefits').textContent = report.adminProductBenefits || '-';
+    document.getElementById('result-product-price').textContent = report.adminProductPrice || '-';
+    
+    const availabilityEl = document.getElementById('result-product-availability');
+    if (report.adminProductAvailability === 'Out of Stock') {
+      availabilityEl.innerHTML = `<span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 50%;"></span> Out of Stock`;
+      availabilityEl.style.color = '#dc2626';
+    } else {
+      availabilityEl.innerHTML = `<span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 50%;"></span> In Stock`;
+      availabilityEl.style.color = '#16a34a';
+    }
+
+    document.getElementById('result-product-owner-advice').textContent = report.adminRecommendation || 'No additional advice provided.';
+
+    // Product Images
+    const smallImg = document.getElementById('result-owner-product-small-img');
+    const largeImg = document.getElementById('result-product-large-img');
+    const noImgText = document.getElementById('result-product-no-img');
+
+    if (report.adminProductImageBase64) {
+      smallImg.src = report.adminProductImageBase64;
+      smallImg.style.display = 'block';
+      largeImg.src = report.adminProductImageBase64;
+      largeImg.style.display = 'block';
+      noImgText.style.display = 'none';
+    } else {
+      smallImg.style.display = 'none';
+      largeImg.style.display = 'none';
+      noImgText.style.display = 'block';
+    }
+
+    // Set up Order Buttons
+    const btnOrder = document.getElementById('btn-place-order');
+    if(btnOrder) btnOrder.onclick = () => submitOrderRequest(report);
+    
+    const btnCall = document.getElementById('btn-call-shop');
+    if(btnCall) btnCall.onclick = () => window.location.href = 'tel:+916301916531';
+    
+    const btnWa = document.getElementById('btn-whatsapp-shop');
+    if(btnWa) btnWa.onclick = () => window.open(`https://wa.me/916301916531?text=Hello K.K Traders, I want to order ${encodeURIComponent(finalProduct)} for my ${report.cropType}.`, '_blank');
+
+  } else {
+    // Hide Owner elements
+    ownerCol.style.display = 'none';
+    productBanner.style.display = 'none';
   }
 }
 
@@ -1034,7 +1082,7 @@ function setupFarmerRequestsListener() {
         const translatedSymptoms = r.symptoms.map(s => translations[currentLanguage][`symp_${s}`] || s).join(', ');
 
         info.innerHTML = `
-          <div class="report-row-crop">${r.cropType}</div>
+          <div class="report-row-crop">${r.cropType === 'Other' && r.detectedCropType ? `Other (${r.detectedCropType})` : r.cropType}</div>
           <div class="report-row-symptoms"><strong>Symptoms:</strong> ${translatedSymptoms}</div>
           <div class="report-row-footer">
             <span class="report-row-date">${r.submittedDate}</span>
@@ -1075,7 +1123,7 @@ function setupAdminRequestsListener() {
       const data = { id: doc.id, ...doc.data() };
       requests.push(data);
       if (data.status === 'AI Analysis Ready') pendingCount++;
-      if (data.status === 'Resolved') resolvedCount++;
+      if (data.status === 'Resolved' || data.status === 'Reviewed') resolvedCount++;
     });
 
     document.getElementById('admin-stat-total').textContent = requests.length;
@@ -1097,7 +1145,7 @@ function setupAdminRequestsListener() {
 
       card.innerHTML = `
         <div class="admin-req-header">
-          <span class="admin-req-crop">${r.cropType}</span>
+          <span class="admin-req-crop">${r.cropType === 'Other' && r.detectedCropType ? `Other (${r.detectedCropType})` : r.cropType}</span>
           <span class="diag-badge status-${r.status.toLowerCase().replace(/\s/g, '')}">${r.status}</span>
         </div>
         <div class="admin-req-farmer">Farmer: ${r.farmerName} (${r.farmerMobile || 'N/A'})</div>
@@ -1143,72 +1191,177 @@ function loadAdminRequestDetail(request) {
   detailPanel.style.display = 'flex';
 
   const translatedSymptoms = request.symptoms.map(s => translations[currentLanguage][`symp_${s}`] || s).join(', ');
+  
+  // Format the date if available
+  let submissionDate = request.timestamp ? new Date(request.timestamp.toDate ? request.timestamp.toDate() : request.timestamp).toLocaleString() : 'Unknown';
 
   detailContent.innerHTML = `
-    <div style="margin-bottom: 12px;">
-      <div class="detail-section-title">Farmer Name</div>
-      <div class="detail-section-val">${request.farmerName} (${request.farmerMobile || 'No Mobile'})</div>
-    </div>
-    
-    <div style="margin-bottom: 12px;">
-      <div class="detail-section-title">Location / Village</div>
-      <div class="detail-section-val">${request.village}</div>
+    <!-- Large Image Preview -->
+    <div style="margin-bottom: 20px; text-align: center; background: #000; border-radius: 8px; overflow: hidden; max-height: 300px;">
+      ${request.images && request.images.length > 0 ? `<img src="${request.images[0]}" alt="Crop Preview" style="max-width: 100%; max-height: 300px; object-fit: contain; cursor: pointer;" onclick="openImageZoom('${request.images[0]}')">` : '<div style="color: #fff; padding: 40px;">No image provided</div>'}
     </div>
 
-    <div style="margin-bottom: 12px;">
-      <div class="detail-section-title">Crop Type</div>
-      <div class="detail-section-val">${request.cropType}</div>
-    </div>
-
-    <div style="margin-bottom: 12px;">
-      <div class="detail-section-title">Reported Symptoms</div>
-      <div class="detail-section-val" style="background-color: #fef2f2; border-color: #fee2e2; color: #991b1b; font-weight: 600;">
-        ${translatedSymptoms}
+    <!-- Farmer Details Card Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Farmer Name</div>
+        <div class="detail-section-val" style="font-weight: 600;">${request.farmerName}</div>
+      </div>
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Mobile Number</div>
+        <div class="detail-section-val" style="font-weight: 600;">${request.farmerMobile || 'No Mobile'}</div>
+      </div>
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Location / Village</div>
+        <div class="detail-section-val" style="font-weight: 600;">${request.village}</div>
+      </div>
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Date Submitted</div>
+        <div class="detail-section-val" style="font-weight: 600;">${submissionDate}</div>
+      </div>
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Crop Type</div>
+        <div class="detail-section-val" style="font-weight: 600;">${request.cropType === 'Other' && request.detectedCropType ? `Other <br><span style="font-size: 0.85rem; color: #166534;">AI Detected: ${request.detectedCropType}</span>` : request.cropType}</div>
+      </div>
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Symptoms</div>
+        <div class="detail-section-val" style="color: #b91c1c; font-weight: 600;">${translatedSymptoms}</div>
+      </div>
+      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; grid-column: span 2;">
+        <div class="detail-section-title" style="color: #64748b; font-size: 0.8rem; margin-bottom: 4px;">Farmer Description</div>
+        <div class="detail-section-val">${request.description || 'No additional description provided.'}</div>
       </div>
     </div>
 
-    <div style="margin-bottom: 12px;">
-      <div class="detail-section-title">Farmer Description</div>
-      <div class="detail-section-val">${request.description || 'No additional description provided.'}</div>
-    </div>
-
-    <div style="margin-bottom: 12px;">
-      <div class="detail-section-title">Crop Photos</div>
-      <div class="admin-detail-images">
-        ${request.images.map(img => `<img src="${img}" alt="Farmer uploaded crop" onclick="openImageZoom('${img}')">`).join('')}
+    <!-- Full AI Diagnosis Card -->
+    <div style="border: 1px solid #c7d2fe; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
+      <div style="background-color: #e0e7ff; padding: 12px 16px; font-weight: bold; color: #3730a3; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        AI Diagnosis Report
       </div>
-    </div>
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 16px; background-color: #fafafa;">
+        
+        <div style="display: flex; gap: 12px;">
+          <div style="flex: 2;">
+            <strong style="color: #4f46e5; font-size: 0.85rem; display: block;">Disease Prediction:</strong>
+            <div style="font-weight: 700; color: #b91c1c; font-size: 1.1rem;">${request.diseaseName || request.aiProblem || 'Unknown'}</div>
+          </div>
+          <div style="flex: 1; text-align: right;">
+            <strong style="color: #4f46e5; font-size: 0.85rem; display: block;">Confidence:</strong>
+            <div style="font-weight: 600;">${request.confidence || '-'}</div>
+          </div>
+          <div style="flex: 1; text-align: right;">
+            <strong style="color: #4f46e5; font-size: 0.85rem; display: block;">Severity:</strong>
+            <div style="font-weight: 600; color: ${request.severity === 'High' ? '#b91c1c' : request.severity === 'Medium' ? '#d97706' : '#15803d'};">${request.severity || '-'}</div>
+          </div>
+        </div>
 
-    <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 16px; background: #f8fafc; padding: 12px; border-radius: 8px;">
-      <h4 style="margin-bottom: 6px; color: var(--primary-dark);">Preliminary AI Advisory Guidance</h4>
-      <p style="font-size: 0.85rem; margin-bottom: 2px;"><strong>Problem:</strong> ${request.aiProblem}</p>
-      <p style="font-size: 0.85rem; margin-bottom: 2px;"><strong>Category:</strong> ${request.aiCategory} (Recommended: ${request.aiRecommended})</p>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0;"><strong>Usage:</strong> ${request.aiUsageNote}</p>
+        <div>
+          <strong style="color: #4f46e5; font-size: 0.85rem; display: block;">Possible Cause:</strong>
+          <div style="color: #333; font-size: 0.95rem;">${(request.reasoning && request.reasoning.length > 0) ? request.reasoning.join(' ') : 'Unknown'}</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #f0fdf4; padding: 12px; border-left: 4px solid #16a34a; border-radius: 4px;">
+            <strong style="color: #166534; font-size: 0.85rem; display: block; margin-bottom: 4px;">AI Suggested Fertilizer Type:</strong>
+            <div id="admin-ai-fertilizer-type" style="color: #14532d; font-size: 0.9rem; font-weight: 600;">${request.recommendedFertilizerType || request.recommendedFertilizer || request.aiRecommended || 'None specified'}</div>
+          </div>
+          <div style="background: #fffbeb; padding: 12px; border-left: 4px solid #f59e0b; border-radius: 4px;">
+            <strong style="color: #b45309; font-size: 0.85rem; display: block; margin-bottom: 4px;">Immediate Action:</strong>
+            <div style="color: #92400e; font-size: 0.9rem;">${request.immediateAction || request.aiUsageNote || 'No immediate action advised'}</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #f4fbf7; padding: 12px; border-left: 4px solid #10b981; border-radius: 4px;">
+            <strong style="color: #047857; font-size: 0.85rem; display: block; margin-bottom: 4px;">Organic Treatment:</strong>
+            <div style="color: #064e3b; font-size: 0.9rem;">${request.organicTreatment || 'None'}</div>
+          </div>
+          <div style="background: #fef2f2; padding: 12px; border-left: 4px solid #ef4444; border-radius: 4px;">
+            <strong style="color: #b91c1c; font-size: 0.85rem; display: block; margin-bottom: 4px;">Chemical Treatment:</strong>
+            <div style="color: #7f1d1d; font-size: 0.9rem;">${request.chemicalTreatment || 'None'}</div>
+          </div>
+        </div>
+
+        <div style="background: #eff6ff; padding: 12px; border-left: 4px solid #3b82f6; border-radius: 4px;">
+          <strong style="color: #1d4ed8; font-size: 0.85rem; display: block; margin-bottom: 4px;">Prevention Tips:</strong>
+          <div style="color: #1e3a8a; font-size: 0.9rem;">${request.preventionTips || 'None provided'}</div>
+        </div>
+      </div>
     </div>
   `;
 
-  // Pre-populate admin advisory inputs
+  // Pre-populate admin advisory inputs with any existing data
+  document.getElementById('admin-product-suggest').value = request.adminProductSuggestion || request.adminSelectedBrand || '';
+  document.getElementById('admin-dosage').value = request.adminDosage || '';
+  document.getElementById('admin-app-method').value = request.adminAppMethod || '';
   document.getElementById('admin-rec-text').value = request.adminRecommendation || '';
-  document.getElementById('admin-product-suggest').value = request.adminProductSuggestion || '';
-  document.getElementById('admin-rec-status').value = request.status === 'AI Analysis Ready' ? 'Reviewed' : request.status;
+  document.getElementById('admin-followup-date').value = request.adminFollowupDate || '';
+  
+  // New Product Specs
+  document.getElementById('admin-product-price').value = request.adminProductPrice || '';
+  document.getElementById('admin-product-availability').value = request.adminProductAvailability || 'In Stock';
+  document.getElementById('admin-product-npk').value = request.adminProductNpk || '';
+  document.getElementById('admin-product-type').value = request.adminProductType || '';
+  document.getElementById('admin-product-content').value = request.adminProductContent || '';
+  document.getElementById('admin-product-use-for').value = request.adminProductUseFor || '';
+  document.getElementById('admin-product-benefits').value = request.adminProductBenefits || '';
+  
+  // Image Preview
+  document.getElementById('admin-product-image-base64').value = request.adminProductImageBase64 || '';
+  const adminImgPreview = document.getElementById('admin-image-preview-img');
+  if (request.adminProductImageBase64) {
+    adminImgPreview.src = request.adminProductImageBase64;
+    adminImgPreview.style.display = 'block';
+  } else {
+    adminImgPreview.src = '';
+    adminImgPreview.style.display = 'none';
+  }
+  
+  // Set status. If brand new, set to 'Pending'.
+  document.getElementById('admin-rec-status').value = request.status === 'AI Analysis Ready' ? 'Pending' : (request.status || 'Pending');
+
+  // Also bind event listeners for the new dual-button system dynamically to avoid duplicates
+  const saveDraftBtn = document.getElementById('btn-admin-save-draft');
+  
+  saveDraftBtn.onclick = (e) => handleAdminSubmitRec(e, false);
+  document.getElementById('admin-recommendation-form').onsubmit = (e) => handleAdminSubmitRec(e, true);
 }
 
-async function handleAdminSubmitRec(e) {
-  e.preventDefault();
+async function handleAdminSubmitRec(e, isSendToFarmer = false) {
+  if (e) e.preventDefault();
 
   const requestId = document.getElementById('admin-active-request-id').value;
   const recommendation = document.getElementById('admin-rec-text').value;
   const product = document.getElementById('admin-product-suggest').value;
-  const status = document.getElementById('admin-rec-status').value;
+  const dosage = document.getElementById('admin-dosage').value;
+  const appMethod = document.getElementById('admin-app-method').value;
+  const followupDate = document.getElementById('admin-followup-date').value;
+  
+  // If sending to farmer, force status to "Product Recommended" or "Completed" if not already set to something final
+  let status = document.getElementById('admin-rec-status').value;
+  if (isSendToFarmer && (status === 'Pending' || status === 'Under Review')) {
+    // The brand is read from the input, wait we removed `product = ...` at the top. Let's fix that too.
+    const brandCheck = document.getElementById('admin-product-suggest').value;
+    status = brandCheck ? 'Product Recommended' : 'Completed';
+    document.getElementById('admin-rec-status').value = status;
+  }
 
   if (!requestId) {
     showToast("No Request Selected", "Please click on a request from the list first.", "warning");
     return;
   }
 
-  const btn = document.getElementById('btn-admin-submit-rec');
-  btn.disabled = true;
-  btn.textContent = "Saving advisory...";
+  const btnSave = document.getElementById('btn-admin-save-draft');
+  const btnSend = document.getElementById('btn-admin-submit-rec');
+  
+  if (btnSave) btnSave.disabled = true;
+  if (btnSend) {
+    btnSend.disabled = true;
+    btnSend.textContent = "Saving advisory...";
+  }
 
   try {
     const docRef = db.collection('farmerRequests').doc(requestId);
@@ -1217,27 +1370,149 @@ async function handleAdminSubmitRec(e) {
 
     const reqData = doc.data();
 
+    // Create Final Product Name
+    const brand = document.getElementById('admin-product-suggest').value;
+    const aiType = reqData.recommendedFertilizerType || reqData.recommendedFertilizer || reqData.aiRecommended || '';
+    const finalProductName = brand ? `${brand} ${aiType}`.trim() : '';
+    
+    // Get new product specs
+    const adminProductPrice = document.getElementById('admin-product-price').value;
+    const adminProductAvailability = document.getElementById('admin-product-availability').value;
+    const adminProductNpk = document.getElementById('admin-product-npk').value;
+    const adminProductType = document.getElementById('admin-product-type').value;
+    const adminProductContent = document.getElementById('admin-product-content').value;
+    const adminProductUseFor = document.getElementById('admin-product-use-for').value;
+    const adminProductBenefits = document.getElementById('admin-product-benefits').value;
+    const adminProductImageBase64 = document.getElementById('admin-product-image-base64').value;
+
     await docRef.update({
       adminRecommendation: recommendation,
-      adminProductSuggestion: product,
+      adminSelectedBrand: brand,
+      finalProductName: finalProductName,
+      adminProductSuggestion: brand, // keeping for backward compatibility
+
+      adminDosage: dosage,
+      adminAppMethod: appMethod,
+      adminFollowupDate: followupDate,
       status: status,
-      adminDate: new Date().toISOString().split('T')[0]
+      adminDate: new Date().toISOString().split('T')[0],
+      
+      // New Specs
+      adminProductPrice,
+      adminProductAvailability,
+      adminProductNpk,
+      adminProductType,
+      adminProductContent,
+      adminProductUseFor,
+      adminProductBenefits,
+      adminProductImageBase64
     });
 
-    const notifMsg = `K.K TRADERS updated fertilizer advice for your ${reqData.cropType} request. Status: ${status}.`;
-    await addNotification(reqData.userId, notifMsg, 'success');
-
-    showToast("Advisory Sent", "Your final advisory recommendation has been submitted to the farmer.", "success");
-    document.getElementById('admin-detail-panel').style.display = 'none';
-    activeReportId = null;
+    if (isSendToFarmer) {
+      const notifMsg = `K.K TRADERS updated fertilizer advice for your ${reqData.cropType} request. Status: ${status}.`;
+      await addNotification(reqData.userId, notifMsg, 'success', requestId);
+      showToast("Advisory Sent", "Your final advisory recommendation has been submitted to the farmer.", "success");
+      document.getElementById('admin-detail-panel').style.display = 'none';
+      activeReportId = null;
+    } else {
+      showToast("Draft Saved", "Recommendation draft saved successfully.", "success");
+    }
   } catch (err) {
     console.error("Admin submit advice error:", err);
     showToast("Save Failed", err.message, "danger");
   } finally {
-    btn.disabled = false;
-    btn.textContent = "Submit Expert Advice";
+    if (btnSave) btnSave.disabled = false;
+    if (btnSend) {
+      btnSend.disabled = false;
+      btnSend.textContent = "Send Recommendation to Farmer";
+    }
   }
 }
+
+
+// 9.b ADMIN ORDERS LISTENER
+let adminOrdersListener = null;
+
+function setupAdminOrdersListener() {
+  if (adminOrdersListener) adminOrdersListener(); // unsubscribe
+
+  const container = document.getElementById('admin-orders-list');
+  const filterSelect = document.getElementById('admin-order-status-filter');
+
+  if (!container || !filterSelect) return;
+
+  const renderList = (snapshot) => {
+    container.innerHTML = '';
+    const orders = [];
+
+    snapshot.forEach(doc => {
+      orders.push({ id: doc.id, ...doc.data() });
+    });
+
+    const filterVal = filterSelect.value;
+    const filteredOrders = orders.filter(o => filterVal === 'all' || o.orderStatus === filterVal);
+
+    if (filteredOrders.length === 0) {
+      container.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No orders found.</td></tr>`;
+      return;
+    }
+
+    filteredOrders.forEach(o => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #e2e8f0';
+
+      tr.innerHTML = `
+        <td style="padding: 12px;"><strong>${o.farmerName}</strong></td>
+        <td style="padding: 12px;">${o.mobile || '-'}</td>
+        <td style="padding: 12px;"><strong style="color: #166534;">${o.finalProductName}</strong></td>
+        <td style="padding: 12px;">${o.quantityRequested}</td>
+        <td style="padding: 12px;">${o.village}</td>
+        <td style="padding: 12px;"><span class="diag-badge status-${(o.orderStatus || '').toLowerCase().replace(/\s/g, '')}">${o.orderStatus}</span></td>
+        <td style="padding: 12px; text-align: center;">
+          <select class="form-control" style="padding: 4px; font-size: 0.8rem; width: auto; display: inline-block;" onchange="updateOrderStatus('${o.id}', this.value, '${o.farmerId}', '${o.finalProductName}')">
+            <option value="Order Requested" ${o.orderStatus === 'Order Requested' ? 'selected' : ''}>Requested</option>
+            <option value="Confirmed" ${o.orderStatus === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+            <option value="Ready for Pickup" ${o.orderStatus === 'Ready for Pickup' ? 'selected' : ''}>Ready for Pickup</option>
+            <option value="Delivered" ${o.orderStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+            <option value="Cancelled" ${o.orderStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </td>
+      `;
+      container.appendChild(tr);
+    });
+  };
+
+  adminOrdersListener = db.collection('orders')
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(renderList, (err) => {
+      console.error("Admin orders listener error:", err);
+    });
+
+  filterSelect.onchange = () => {
+    container.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Filtering orders...</td></tr>`;
+    db.collection('orders').orderBy('createdAt', 'desc').get()
+      .then(renderList)
+      .catch(err => {
+        console.error("Admin orders filter error:", err);
+      });
+  };
+}
+
+window.updateOrderStatus = async function(orderId, newStatus, farmerId, productName) {
+  try {
+    await db.collection('orders').doc(orderId).update({
+      orderStatus: newStatus
+    });
+    showToast("Status Updated", `Order status changed to ${newStatus}`, "success");
+    
+    // Notify farmer
+    const notifMsg = `Your order for ${productName} is now: ${newStatus}`;
+    await addNotification(farmerId, notifMsg, 'info');
+  } catch (err) {
+    console.error("Error updating order status:", err);
+    showToast("Update Failed", "Could not update order status.", "danger");
+  }
+};
 
 // 10. REAL-TIME NOTIFICATIONS
 function setupNotificationsListener() {
@@ -1299,9 +1574,17 @@ function renderNotificationsList(notifs) {
     item.style.gap = '8px';
     item.style.cursor = 'pointer';
 
+    let actionButton = '';
+    if (n.requestId) {
+      actionButton = `<button style="margin-top: 8px; font-size: 0.75rem; padding: 4px 12px;" class="btn-primary">View Details</button>`;
+    }
+
     item.innerHTML = `
-      <div style="font-size: 0.85rem; color: var(--text-main); font-weight: ${n.read ? 'normal' : 'bold'}">${n.message}</div>
-      <div style="font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0;">${n.date || ''}</div>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 0.85rem; color: var(--text-main); font-weight: ${n.read ? 'normal' : 'bold'}">${n.message}</div>
+        ${actionButton}
+      </div>
+      <div style="font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0; margin-left: 8px;">${n.date || ''}</div>
     `;
 
     item.onclick = async () => {
@@ -1312,24 +1595,79 @@ function renderNotificationsList(notifs) {
           console.error("Error reading notification:", err);
         }
       }
+
+      if (n.requestId) {
+        try {
+          const doc = await db.collection('farmerRequests').doc(n.requestId).get();
+          if (doc.exists) {
+            const requestData = { id: doc.id, ...doc.data() };
+            renderAIResultPage(requestData);
+            showPage('view-farmer-result'); // Ensure we switch the view to the result page!
+            document.getElementById('notification-panel').style.display = 'none';
+          } else {
+            showToast("Not Found", "The original request could not be found.", "warning");
+          }
+        } catch (err) {
+          console.error("Error fetching request from notification:", err);
+        }
+      }
     };
 
     container.appendChild(item);
   });
 }
 
-async function addNotification(userId, message, type = 'info') {
+async function addNotification(userId, message, type = 'info', requestId = null) {
   try {
     await db.collection('notifications').add({
       userId: userId,
       message: message,
       type: type,
+      requestId: requestId,
       date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       read: false,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
   } catch (err) {
     console.error("Error adding notification:", err);
+  }
+}
+// 10.b ORDER MANAGEMENT
+async function submitOrderRequest(report) {
+  const btn = document.getElementById('btn-place-order');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Placing Order...";
+  }
+
+  try {
+    const finalProductName = report.finalProductName || report.adminProductSuggestion || 'None specified';
+    
+    // Using a default quantity of 1 for now, can be expanded later
+    await db.collection('orders').add({
+      farmerId: report.userId,
+      farmerName: report.farmerName,
+      mobile: report.farmerMobile || '',
+      requestId: report.id,
+      cropType: report.cropType,
+      aiSuggestedFertilizer: report.recommendedFertilizerType || report.recommendedFertilizer || report.aiRecommended || '',
+      ownerSelectedBrand: report.adminSelectedBrand || report.adminProductSuggestion || '',
+      finalProductName: finalProductName,
+      quantityRequested: "1 Unit", // Default for now
+      village: report.village || '',
+      orderStatus: "Order Requested",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showToast("Order Requested", `We have sent your order request for ${finalProductName} to K.K Traders. They will contact you shortly!`, "success");
+    if (btn) btn.textContent = "Order Placed!";
+  } catch (err) {
+    console.error("Error submitting order request:", err);
+    showToast("Order Failed", "Could not place order request. Please try again.", "danger");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Place Order Request";
+    }
   }
 }
 
@@ -1466,6 +1804,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('notification-btn').style.display = 'none';
           showPage('view-admin-dashboard');
           setupAdminRequestsListener();
+          setupAdminOrdersListener();
         } else {
           document.body.classList.remove('owner-theme');
           document.getElementById('notification-btn').style.display = 'block';
@@ -1489,6 +1828,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.body.classList.add('owner-theme');
           showPage('view-admin-dashboard');
           setupAdminRequestsListener();
+          setupAdminOrdersListener();
         } else {
           document.body.classList.remove('owner-theme');
           showPage('view-farmer-dashboard');
@@ -1504,6 +1844,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (farmerRequestsListener) farmerRequestsListener();
       if (notificationsListener) notificationsListener();
       if (adminRequestsListener) adminRequestsListener();
+      if (adminOrdersListener) adminOrdersListener();
 
       document.getElementById('signout-btn').style.display = 'none';
       document.getElementById('notification-btn').style.display = 'none';
@@ -1689,6 +2030,84 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   document.getElementById('btn-result-view-reports').onclick = () => showPage('view-farmer-reports');
+
+  // Admin Dashboard Tabs
+  document.getElementById('admin-tab-requests').onclick = (e) => {
+    document.getElementById('admin-tab-requests').classList.add('active-tab');
+    document.getElementById('admin-tab-requests').style.borderBottom = '3px solid var(--primary-dark)';
+    document.getElementById('admin-tab-requests').style.color = 'var(--primary-dark)';
+    
+    document.getElementById('admin-tab-orders').classList.remove('active-tab');
+    document.getElementById('admin-tab-orders').style.borderBottom = 'none';
+    document.getElementById('admin-tab-orders').style.color = 'var(--text-muted)';
+    
+    document.getElementById('admin-view-requests').style.display = 'block';
+    document.getElementById('admin-view-orders').style.display = 'none';
+  };
+
+  document.getElementById('admin-tab-orders').onclick = (e) => {
+    document.getElementById('admin-tab-orders').classList.add('active-tab');
+    document.getElementById('admin-tab-orders').style.borderBottom = '3px solid var(--primary-dark)';
+    document.getElementById('admin-tab-orders').style.color = 'var(--primary-dark)';
+    
+    document.getElementById('admin-tab-requests').classList.remove('active-tab');
+    document.getElementById('admin-tab-requests').style.borderBottom = 'none';
+    document.getElementById('admin-tab-requests').style.color = 'var(--text-muted)';
+    
+    document.getElementById('admin-view-requests').style.display = 'none';
+    document.getElementById('admin-view-orders').style.display = 'block';
+  };
+  // Admin Product Image Upload Logic
+  const adminImgBox = document.getElementById('admin-image-preview-box');
+  const adminImgInput = document.getElementById('admin-product-image-input');
+  const adminImgPreview = document.getElementById('admin-image-preview-img');
+  const adminImgBase64 = document.getElementById('admin-product-image-base64');
+  
+  if (adminImgBox && adminImgInput) {
+    adminImgBox.onclick = () => adminImgInput.click();
+    
+    adminImgInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Compress image to fit within Firestore 1MB limits safely
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          adminImgBase64.value = compressedDataUrl;
+          adminImgPreview.src = compressedDataUrl;
+          adminImgPreview.style.display = 'block';
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+  }
 
   // Submit forms hooks
   document.getElementById('crop-upload-form').onsubmit = handleFarmerSubmit;

@@ -29,11 +29,11 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
     console.error('Gemini API key is not configured in environment variables.');
-    return res.status(500).json({ error: 'Gemini API key is not configured.' });
+    return res.status(500).json({ error: 'Gemini API key is not configured on the server.' });
   }
 
-  console.log('Image upload started (Received by Vercel serverless function)');
   console.log('AI diagnosis started for crop:', cropType);
+  console.log('Image successfully sent to Gemini for visual analysis.');
 
   try {
     // We only send the first image to Gemini to save tokens and ensure single-image focus
@@ -47,25 +47,52 @@ export default async function handler(req, res) {
     const mimeType = matches[1];
     const base64Data = matches[2];
 
-    const promptText = `You are an expert crop pathologist and agronomist. 
-Analyze the provided crop leaf image, along with the following farmer-reported details:
+    const promptText = `You are an expert crop pathologist and agronomist for K.K. Traders fertilizer shop.
+Your primary task is to visually analyze the provided crop leaf/plant image.
+Do NOT generate a diagnosis based solely on the symptoms text. You MUST physically inspect the image.
+
+Analyze the image for:
+- Leaf color changes (yellowing, browning, redness)
+- Spots (size, color, halo presence)
+- Holes or pest damage marks
+- Curling, wilting, or stunted growth
+- Presence of fungus, mold, or rust
+- Mosaic patterns or dry edges
+- Stem condition (if visible)
+- Nutrient deficiency indicators
+
+Farmer-reported details (use as secondary context only):
 - Crop Type: ${cropType}
 - Symptoms Selected: ${symptoms.join(', ')}
 - Farmer Description: ${description || 'No additional description provided.'}
 
-Provide an AI-assisted preliminary diagnosis, possible causes, prevention tips, and fertilizer & treatment recommendations.
-You MUST return ONLY a valid, raw JSON object matching this JSON schema exactly (do NOT wrap it in markdown blocks like \`\`\`json, return only the plain JSON string):
+If the crop type is "Other", you must identify the crop name from the image.
+
+If the image is completely unclear, blurry, or not a plant, output "Image quality is insufficient for an accurate diagnosis." for the diseasePrediction field.
+Otherwise, provide a highly detailed, image-driven diagnosis. Different images MUST produce different specific diagnoses.
+Confidence score must reflect your visual certainty (70% - 98%).
+Severity must be one of: "Low", "Medium", "High".
+You MUST include "Use only after confirmation from K.K. Traders." in the chemicalTreatment field.
+
+You MUST return ONLY a valid, raw JSON object matching this exact schema (do not use markdown blocks like \`\`\`json):
 {
-  "diseasePrediction": "Name of the crop disease or leaf problem diagnosed",
-  "possibleCauses": "Brief description of the possible causes for this crop problem",
-  "fertilizerRecommendation": "Fertilizer recommendation details (e.g. type, concentration, dosage, timing)",
-  "organicTreatment": "Details of suitable organic treatment or natural remedies",
-  "chemicalTreatment": "Details of suitable chemical treatment (if needed, otherwise N/A)",
-  "preventionTips": "Tips to prevent this issue from recurring in the future",
-  "confidence": "Estimated confidence percentage (e.g. 85%)"
+  "selectedCropType": "${cropType}",
+  "detectedCropType": "Name of crop identified from image",
+  "diseasePrediction": "Name of the disease, pest, or nutrient deficiency visually detected",
+  "confidence": "e.g. 92%",
+  "severity": "Low / Medium / High",
+  "reasoning": ["Visual evidence 1 found in image", "Visual evidence 2", "Secondary correlation with symptoms"],
+  "possibleCauses": "Detailed explanation of why this issue occurs based on visual symptoms",
+  "organicTreatment": "Details of organic treatment (e.g. Neem Oil Spray)",
+  "chemicalTreatment": "Details of chemical pesticides/fungicides. Must mention confirmation from K.K. Traders.",
+  "recommendedFertilizerType": "Generic fertilizer or chemical type needed (e.g. Potassium Nitrate 13:0:45, NPK 19:19:19, Fungicide)",
+  "preventionTips": "4-6 prevention tips (separated by newlines or bullet points)",
+  "immediateAction": "3-5 important immediate actions (separated by newlines or bullet points)",
+  "estimatedRecoveryTime": "e.g. 7-14 days",
+  "recommendedExpert": "K.K Traders"
 }`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
@@ -111,91 +138,53 @@ You MUST return ONLY a valid, raw JSON object matching this JSON schema exactly 
 
     const result = JSON.parse(cleanJsonStr);
     
+    console.log('Gemini response successfully received and parsed.');
+    console.log('Parsed Diagnosis:', JSON.stringify(result, null, 2));
+    
     console.log('AI diagnosis completed successfully');
     return res.status(200).json(result);
 
   } catch (err) {
     console.error('Gemini API call failed, running server-side fallback diagnosis:', err);
 
-    // Fallback diagnosis engine structured with the new schema
+    // Fallback diagnosis engine structured with the highly detailed schema
     const hasYellow = symptoms.includes('yellow_leaves');
     const hasLeafSpots = symptoms.includes('leaf_spots') || symptoms.includes('brown_spots');
     const hasPest = symptoms.includes('pest_attack') || symptoms.includes('holes_leaves');
     const hasWilting = symptoms.includes('wilting') || symptoms.includes('dry_leaves');
 
     let fallbackResult = {
+      selectedCropType: cropType,
+      detectedCropType: cropType === 'Other' ? "Unknown Crop – Please confirm with K.K TRADERS" : cropType,
       diseasePrediction: "General Nutrient Lack Suspected",
+      confidence: "70%",
+      severity: "Medium",
+      reasoning: ["Visible signs of crop stress.", "Symptoms match multiple nutrient or watering issues."],
       possibleCauses: "Depleted soil nutrients, lack of balanced fertilization, or watering drainage stress.",
       fertilizerRecommendation: "NPK 19-19-19 Soluble Fertilizer, dissolve 5g per Litre of water.",
       organicTreatment: "Apply well-decomposed organic farm manure or compost to improve soil structure.",
-      chemicalTreatment: "Spray NPK 19-19-19 foliar spray in the early morning. Repeat every 14 days.",
-      preventionTips: "Conduct periodic soil health test. Crop rotation with legumes to naturalize nitrogen levels.",
-      confidence: "70%",
-      isFallback: true
+      chemicalTreatment: "Use only after confirmation from an agricultural expert.",
+      immediateAction: "Adjust watering schedule immediately.\nConsult K.K Traders for exact product.",
+      preventionTips: "Conduct periodic soil health test.\nEnsure proper field drainage.",
+      estimatedRecoveryTime: "1-2 weeks",
+      recommendedExpert: "K.K Traders"
     };
 
     if (hasYellow) {
-      if (cropType === 'Tomato') {
-        fallbackResult.diseasePrediction = "Nitrogen deficiency suspected";
-        fallbackResult.possibleCauses = "Insufficient nitrogen levels in the soil, heavy rainfall leaching nutrients, or soil compaction.";
-        fallbackResult.fertilizerRecommendation = "Apply Urea 46% at 50kg per acre in two split doses.";
-        fallbackResult.organicTreatment = "Apply composted steer manure, fish emulsion, or blood meal around the plant base.";
-        fallbackResult.chemicalTreatment = "Broadcast Urea 46% on damp soil and irrigate lightly immediately.";
-        fallbackResult.preventionTips = "Integrate cover crops such as alfalfa or clover in rotation cycles. Avoid over-watering.";
-      } else if (cropType === 'Paddy') {
-        fallbackResult.diseasePrediction = "Zinc & Nitrogen deficiency likely";
-        fallbackResult.possibleCauses = "Alkaline soil pH binding zinc, continuous flooding, or low soil organic matter.";
-        fallbackResult.fertilizerRecommendation = "Mix 10kg Zinc Sulphate 33% with 50kg Urea per acre.";
-        fallbackResult.organicTreatment = "Apply green manure (like Dhaincha) before transplanting and use vermicompost.";
-        fallbackResult.chemicalTreatment = "Broadcast the Zinc Sulphate and Urea blend evenly onto damp fields.";
-        fallbackResult.preventionTips = "Allow the field to dry out briefly between irrigation cycles (Alternate Wetting and Drying).";
-      } else {
-        fallbackResult.diseasePrediction = "Nitrogen deficiency suspected";
-        fallbackResult.possibleCauses = "Depleted nitrogen reserves in soil due to intensive farming or poor organic matter content.";
-        fallbackResult.fertilizerRecommendation = "Apply Urea 46% near crop rows.";
-        fallbackResult.organicTreatment = "Incorporate legume crop residues or apply compost tea.";
-        fallbackResult.chemicalTreatment = "Apply side-dressing of Nitrogen-rich Urea fertilizer (40kg per acre).";
-        fallbackResult.preventionTips = "Perform regular soil testing and balance nitrogen inputs based on crop stages.";
-      }
+      fallbackResult.diseasePrediction = "Nitrogen deficiency suspected";
+      fallbackResult.possibleCauses = "Insufficient nitrogen levels in the soil, heavy rainfall leaching nutrients, or soil compaction.";
+      fallbackResult.fertilizerRecommendation = "Apply Urea 46% at 50kg per acre in two split doses.";
+      fallbackResult.reasoning = ["Yellowing indicates lack of chlorophyll production typically tied to Nitrogen."];
     } else if (hasLeafSpots) {
-      if (cropType === 'Tomato') {
-        fallbackResult.diseasePrediction = "Early Blight Fungus suspected";
-        fallbackResult.possibleCauses = "Alternaria solani fungal spores, high humidity, or wet leaf foliage from overhead watering.";
-        fallbackResult.fertilizerRecommendation = "Apply balanced NPK to promote vigor, but avoid excess Nitrogen which creates tender leaves.";
-        fallbackResult.organicTreatment = "Spray copper-based organic fungicides or use Neem oil formulations.";
-        fallbackResult.chemicalTreatment = "Apply Mancozeb 75% WP (2.5g per Litre of water) or Chlorothalonil.";
-        fallbackResult.preventionTips = "Prune lower leaves to enhance airflow. Water at the base (drip) rather than overhead.";
-      } else {
-        fallbackResult.diseasePrediction = "Fungal Pathogen infestation";
-        fallbackResult.possibleCauses = "High humidity, overcrowded planting, or presence of infected plant debris.";
-        fallbackResult.fertilizerRecommendation = "Apply Potassium-rich fertilizers to help build cell wall resistance.";
-        fallbackResult.organicTreatment = "Spray with compost tea or dilute baking soda solutions.";
-        fallbackResult.chemicalTreatment = "Spray Carbendazim 50% WP (2g per Litre of water) on foliage.";
-        fallbackResult.preventionTips = "Practice clean weeding and destroy infected plant parts immediately. Space crops properly.";
-      }
+      fallbackResult.diseasePrediction = "Fungal Pathogen infestation";
+      fallbackResult.possibleCauses = "High humidity, overcrowded planting, or presence of infected plant debris.";
+      fallbackResult.fertilizerRecommendation = "Apply Potassium-rich fertilizers to help build cell wall resistance.";
+      fallbackResult.reasoning = ["Spots indicate fungal spore germination and cell death."];
     } else if (hasPest) {
-      if (cropType === 'Tomato') {
-        fallbackResult.diseasePrediction = "Fruit Borer / Caterpillar attack";
-        fallbackResult.possibleCauses = "Helicoverpa armigera moth laying eggs on young leaves and flowers.";
-        fallbackResult.fertilizerRecommendation = "Maintain balanced nutrition to support recovery from pest defoliation.";
-        fallbackResult.organicTreatment = "Apply Bacillus thuringiensis (Bt) formulation or spray Neem Oil (10000 ppm) with liquid soap.";
-        fallbackResult.chemicalTreatment = "Spray Spinosad 45% SC (0.3ml per Litre of water) in the late evening.";
-        fallbackResult.preventionTips = "Install pheromone traps to monitor adult moth activity. Plant marigold as a trap crop.";
-      } else {
-        fallbackResult.diseasePrediction = "Foliar Chewing Pest infestation";
-        fallbackResult.possibleCauses = "Presence of larval caterpillars, beetles, or grasshoppers.";
-        fallbackResult.fertilizerRecommendation = "Use balanced organic nutrients to help crop grow past pest leaf damage.";
-        fallbackResult.organicTreatment = "Spray Neem oil 10000 ppm (5ml per Litre of water) directly underneath leaves.";
-        fallbackResult.chemicalTreatment = "Apply broad-spectrum insect control like Cypermethrin or Lambda-Cyhalothrin.";
-        fallbackResult.preventionTips = "Practice clean cultivation and clear wild weeds around the field edges.";
-      }
-    } else if (hasWilting) {
-      fallbackResult.diseasePrediction = "Root Rot / Water drainage stress";
-      fallbackResult.possibleCauses = "Excessive soil water logging, lack of proper drainage, or root-damaging Pythium/Phytophthora.";
-      fallbackResult.fertilizerRecommendation = "Avoid direct granular fertilizers on damaged roots. Apply Humic Acid to soil.";
-      fallbackResult.organicTreatment = "Drench soil with Trichoderma viride bio-fungicide (2kg mixed with compost per acre).";
-      fallbackResult.chemicalTreatment = "Drench soil with Metalaxyl-Mancozeb blend around root zones.";
-      fallbackResult.preventionTips = "Ensure well-raised nursery beds and clean irrigation channels to prevent water logging.";
+      fallbackResult.diseasePrediction = "Foliar Chewing Pest infestation";
+      fallbackResult.possibleCauses = "Presence of larval caterpillars, beetles, or grasshoppers.";
+      fallbackResult.organicTreatment = "Spray Neem oil 10000 ppm (5ml per Litre of water) directly underneath leaves.";
+      fallbackResult.reasoning = ["Visible holes in leaves indicate active chewing insects."];
     }
 
     const count = symptoms.length;

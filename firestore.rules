@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Security Rules for Farmer Requests
+    match /farmerRequests/{docId} {
+      // Farmers can only create their own requests
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      
+      // Farmers can read their own requests; Admins can read all requests
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+      
+      // Only admins can update (resolve) or delete requests
+      allow update, delete: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Security Rules for User Profiles
+    match /users/{userId} {
+      // Users can only read and write their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
