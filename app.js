@@ -2033,31 +2033,46 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-result-view-reports').onclick = () => showPage('view-farmer-reports');
 
   // Admin Dashboard Tabs
-  document.getElementById('admin-tab-requests').onclick = (e) => {
-    document.getElementById('admin-tab-requests').classList.add('active-tab');
-    document.getElementById('admin-tab-requests').style.borderBottom = '3px solid var(--primary-dark)';
-    document.getElementById('admin-tab-requests').style.color = 'var(--primary-dark)';
-    
-    document.getElementById('admin-tab-orders').classList.remove('active-tab');
-    document.getElementById('admin-tab-orders').style.borderBottom = 'none';
-    document.getElementById('admin-tab-orders').style.color = 'var(--text-muted)';
-    
-    document.getElementById('admin-view-requests').style.display = 'block';
-    document.getElementById('admin-view-orders').style.display = 'none';
-  };
+  const tabRequests = document.getElementById('admin-tab-requests');
+  const tabOrders = document.getElementById('admin-tab-orders');
+  
+  if (tabRequests) {
+    tabRequests.onclick = (e) => {
+      tabRequests.classList.add('active-tab');
+      tabRequests.style.borderBottom = '3px solid var(--primary-dark)';
+      tabRequests.style.color = 'var(--primary-dark)';
+      
+      if (tabOrders) {
+        tabOrders.classList.remove('active-tab');
+        tabOrders.style.borderBottom = 'none';
+        tabOrders.style.color = 'var(--text-muted)';
+      }
+      
+      const viewReq = document.getElementById('admin-view-requests');
+      if (viewReq) viewReq.style.display = 'block';
+      const viewOrd = document.getElementById('admin-view-orders');
+      if (viewOrd) viewOrd.style.display = 'none';
+    };
+  }
 
-  document.getElementById('admin-tab-orders').onclick = (e) => {
-    document.getElementById('admin-tab-orders').classList.add('active-tab');
-    document.getElementById('admin-tab-orders').style.borderBottom = '3px solid var(--primary-dark)';
-    document.getElementById('admin-tab-orders').style.color = 'var(--primary-dark)';
-    
-    document.getElementById('admin-tab-requests').classList.remove('active-tab');
-    document.getElementById('admin-tab-requests').style.borderBottom = 'none';
-    document.getElementById('admin-tab-requests').style.color = 'var(--text-muted)';
-    
-    document.getElementById('admin-view-requests').style.display = 'none';
-    document.getElementById('admin-view-orders').style.display = 'block';
-  };
+  if (tabOrders) {
+    tabOrders.onclick = (e) => {
+      tabOrders.classList.add('active-tab');
+      tabOrders.style.borderBottom = '3px solid var(--primary-dark)';
+      tabOrders.style.color = 'var(--primary-dark)';
+      
+      if (tabRequests) {
+        tabRequests.classList.remove('active-tab');
+        tabRequests.style.borderBottom = 'none';
+        tabRequests.style.color = 'var(--text-muted)';
+      }
+      
+      const viewReq = document.getElementById('admin-view-requests');
+      if (viewReq) viewReq.style.display = 'none';
+      const viewOrd = document.getElementById('admin-view-orders');
+      if (viewOrd) viewOrd.style.display = 'block';
+    };
+  }
   // Admin Product Image Upload Logic
   const adminImgBox = document.getElementById('admin-image-preview-box');
   const adminImgInput = document.getElementById('admin-product-image-input');
